@@ -67,16 +67,17 @@ namespace rip::binary {
 		}
 	};
 
-	template<typename AddrType>
+	template<typename AddrType, bool byteswap_offsets = true, bool relative_offsets = false>
 	class binary_istream {
 	protected:
 		fast_istream& stream;
-		size_t offset;
+		size_t offset_base;
 
 	public:
+		typedef AddrType AddrType;
 		std::endian endianness;
 
-		binary_istream(fast_istream& stream, std::endian endianness = std::endian::native, size_t offset = 0) : stream{ stream }, endianness{ endianness }, offset{ offset } {}
+		binary_istream(fast_istream& stream, std::endian endianness = std::endian::native, size_t offset_base = 0) : stream{ stream }, endianness{ endianness }, offset_base{ offset_base } {}
 
 		template<typename T, bool byteswap = true>
 		void read(T& obj) {
@@ -88,9 +89,28 @@ namespace rip::binary {
 
 		template<typename T>
 		void read(offset_t<T>& obj) {
-			AddrType offset;
-			read(offset);
-			obj = offset == 0 ? offset_t<T>{} : offset_t<T>{ static_cast<size_t>(offset) };
+			size_t offset;
+			read_as<AddrType, byteswap_offsets>(offset);
+
+			if constexpr (relative_offsets)
+				offset += this->tellg() - sizeof(AddrType);
+
+			obj = offset == 0 ? offset_t<T>{} : offset_t<T>{ offset };
+		}
+
+		//void read(size_val_t& obj) {
+		//	read_as<AddrType>(obj);
+		//}
+
+		//void read(ptrdiff_val_t& obj) {
+		//	read_as<AddrType>(obj);
+		//}
+
+		template<typename U, bool byteswap = true, typename T = U>
+		void read_as(T& obj) {
+			U value; 
+			read<U, byteswap>(value);
+			obj = static_cast<T>(value);
 		}
 
 		void read_string(std::string& str) {
@@ -106,15 +126,15 @@ namespace rip::binary {
 		}
 
 		void seekg(size_t loc) {
-			stream.seekg(loc + offset);
+			stream.seekg(loc + offset_base);
 		}
 
 		size_t tellg() const {
-			return stream.tellg() - offset;
+			return stream.tellg() - offset_base;
 		}
 	};
 
-	template<typename AddrType, std::endian endianness = std::endian::native>
+	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true>
 	class binary_ostream {
 	protected:
 		fast_ostream& stream;
@@ -143,7 +163,20 @@ namespace rip::binary {
 
 		template<typename T>
 		void write(const offset_t<T>& obj) {
-			write(obj.has_value() ? static_cast<AddrType>(obj.value()) : 0);
+			write_as<AddrType, byteswap_offsets>(obj.has_value() ? obj.value() : 0);
+		}
+
+		//void write(const size_val_t& obj) {
+		//	write_as<AddrType>(obj);
+		//}
+
+		//void write(const ptrdiff_val_t& obj) {
+		//	write_as<AddrType>(obj);
+		//}
+
+		template<typename U, bool byteswap = true, typename T = U>
+		void write_as(const T& obj) {
+			write<U, byteswap>(static_cast<U>(obj));
 		}
 
 		void write_string(const char* str) {

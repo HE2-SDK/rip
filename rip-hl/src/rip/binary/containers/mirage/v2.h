@@ -49,52 +49,71 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::mirage::v2 {
-	template<typename AddressType>
+	template<typename AddressType, bool byteswap_offsets = true, bool relative_offsets = false>
     class MirageResourceImageReader {
-        class node_istream : public binary_istream<AddressType> {
-            size_t nodeOffset{};
+    private:
+        fast_istream raw_stream;
+        binary_istream<AddressType, byteswap_offsets, relative_offsets> stream;
+        FileHeader header;
+        std::endian endianness{ std::endian::big };
+        size_t offsetBase;
+
+    public:
+        class NodeReader {
+            MirageResourceImageReader& imgReader;
 
         public:
             NodeHeader header;
 
-            node_istream(fast_istream& raw_stream, std::endian endianness) : binary_istream<AddressType>{ raw_stream, endianness, 0x10 }, nodeOffset{ this->tellg() } {
-                this->read(header);
+            NodeReader(MirageResourceImageReader& imgReader) : imgReader{ imgReader } {
+                imgReader.stream.read(header);
             }
 
-            bool isLastChild() const {
+            unsigned int get_size() const {
+                return header.nodeSizeAndFlags & 0x1FFFFFFF;
+            }
+
+            bool is_leaf() const {
+                return header.nodeSizeAndFlags & NodeHeader::LEAF;
+            }
+
+            bool is_last_child() const {
                 return header.nodeSizeAndFlags & NodeHeader::LAST_CHILD;
             }
 
+            binary_istream<AddressType, byteswap_offsets, relative_offsets>& get_stream() {
+                return imgReader.stream;
+            }
+
             template<typename F>
-            void forEachChild(F f) {
-                assert((header.nodeSizeAndFlags & NodeHeader::LEAF) == 0 && "not a branch node");
+            void for_each_child(F f) {
+                assert(!is_leaf() && "not a branch node");
 
                 bool isLast{};
                 do {
-                    node_istream child{ this->stream, this->endianness };
+                    auto nodeOffset = imgReader.stream.tellg();
+
+                    NodeReader child{ imgReader };
 
                     f(child);
 
-                    this->seekg(nodeOffset + (header.nodeSizeAndFlags & 0x1FFFFFFF));
-                    this->skip_padding(16);
-                    isLast = child.isLastChild();
+                    imgReader.stream.seekg(nodeOffset + child.get_size());
+                    imgReader.stream.skip_padding(16);
+                    isLast = child.is_last_child();
                 } while (!isLast);
             }
         };
 
-    private:
-        fast_istream raw_stream;
-        binary_istream<AddressType> stream;
-        FileHeader header;
-        std::endian endianness{ std::endian::big };
-
-    public:
-        MirageResourceImageReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+        MirageResourceImageReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream, endianness, raw_stream.tellg() + sizeof(FileHeader) } {
             stream.read(header);
         }
 
-        node_istream get_root_node() {
-            return { raw_stream, endianness };
+        binary_istream<AddressType, byteswap_offsets, relative_offsets>& get_stream() {
+            return stream;
+        }
+
+        NodeReader get_root_node() {
+            return { *this };
         }
     };
 

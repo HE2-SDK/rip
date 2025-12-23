@@ -9,6 +9,50 @@
 #include "BlobWorker.h"
 #include <iostream>
 
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector2& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector3& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector4& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Quaternion& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix34& dt) {
+	return os << "[a matrix34]";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix44& dt) {
+	return os << "[a matrix44]";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Position& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::math::Rotation& dt) {
+	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ", " << dt.w() << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::strings::VariableString& dt) {
+	return os << dt.c_str();
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV1& dt) {
+	return os << dt.id;
+}
+
+std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV2& dt) {
+	return os << dt.groupId << dt.objectId;
+}
+
 namespace rip::binary {
 	using namespace ucsl::reflection;
 	using namespace ucsl::reflection::traversals;
@@ -109,6 +153,7 @@ namespace rip::binary {
 			template<typename T>
 			int visit_primitive(T& obj, const PrimitiveInfo<T>& info) {
 				state.deserializer.backend.read(obj);
+				std::cout << "read primitive " << obj << std::endl;
 				return 0;
 			}
 
@@ -195,9 +240,9 @@ namespace rip::binary {
 					*buffer = nullptr;
 				else
 					enqueueBlock(*buffer, offset, [info, length]() { return BlockAllocationData{ *length * info.itemSize, info.itemAlignment }; }, [length, itemSize = info.itemSize, f](opaque_obj* target) {
-						for (size_t i = 0; i < *length; i++)
-							f(*addptr(target, i * itemSize));
-					});
+					for (size_t i = 0; i < *length; i++)
+						f(*addptr(target, i * itemSize));
+						});
 				return 0;
 			}
 
@@ -226,7 +271,7 @@ namespace rip::binary {
 			int visit_pointer(opaque_obj*& obj, const PointerInfo<A, S>& info, F f) {
 				offset_t<opaque_obj> offset{};
 				state.deserializer.backend.read(offset);
-				//std::cout << "        Pointer here. Value is " << offset.value_or(0) << std::endl;
+				std::cout << "        Pointer here. Value is " << offset.value_or(0) << std::endl;
 				enqueueBlock(obj, offset, [info]() { return BlockAllocationData{ info.getTargetSize(), info.getTargetAlignment() }; }, [f](opaque_obj* target) {
 					f(*target);
 				});
@@ -251,7 +296,7 @@ namespace rip::binary {
 				state.deserializer.backend.skip_padding(info.alignment);
 
 				size_t typeStart = state.deserializer.backend.tellg();
-				//std::cout << "      Starting type at " << std::hex << typeStart << "; size is " << info.size << ", alignment is " << info.alignment << std::endl;
+				std::cout << "      Starting type at " << std::hex << typeStart << "; size is " << info.size << ", alignment is " << info.alignment << std::endl;
 
 				// Catch alignment issues.
 				if (currentStructAddr)
@@ -264,15 +309,15 @@ namespace rip::binary {
 				// Catch alignment issues.
 				if (currentStructAddr)
 					assert((state.deserializer.backend.tellg() - dbgStructStartLoc) == (reinterpret_cast<size_t>(&obj) + info.size - reinterpret_cast<size_t>(currentStructAddr)));
-				//std::cout << "      Ending type at " << std::hex << typeStart << "; size is " << info.size << ", alignment is " << info.alignment << std::endl;
+				std::cout << "      Ending type at " << std::hex << typeStart << "; size is " << info.size << ", alignment is " << info.alignment << std::endl;
 				return 0;
 			}
 
 			template<typename F>
 			int visit_field(opaque_obj& obj, const FieldInfo& info, F f) {
-				//std::cout << "    Starting field " << info.name << std::endl;
+				std::cout << "    Starting field " << info.name << std::endl;
 				f(obj);
-				//std::cout << "    Ending field " << info.name << std::endl;
+				std::cout << "    Ending field " << info.name << std::endl;
 				return 0;
 			}
 
@@ -287,7 +332,7 @@ namespace rip::binary {
 				size_t prevDbgStructStartLoc = dbgStructStartLoc;
 				void* prevStructAddr = currentStructAddr;
 
-				//std::cout << "  Starting structure " << info.name << std::endl;
+				std::cout << "  Starting structure " << info.name << std::endl;
 
 				dbgStructStartLoc = state.deserializer.backend.tellg();
 				currentStructAddr = &obj;
@@ -297,7 +342,7 @@ namespace rip::binary {
 				dbgStructStartLoc = prevDbgStructStartLoc;
 				currentStructAddr = prevStructAddr;
 
-				//std::cout << "  Ending structure " << info.name << std::endl;
+				std::cout << "  Ending structure " << info.name << std::endl;
 
 				return 0;
 			}
