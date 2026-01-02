@@ -92,19 +92,23 @@ namespace rip::binary {
 			size_t offset;
 			read_as<AddrType, byteswap_offsets>(offset);
 
-			if constexpr (relative_offsets)
-				offset += this->tellg() - sizeof(AddrType);
+			if (offset == 0)
+				obj = offset_t<T>{};
+			else {
+				if constexpr (relative_offsets)
+					offset += this->tellg() - sizeof(AddrType);
 
-			obj = offset == 0 ? offset_t<T>{} : offset_t<T>{ offset };
+				obj = offset_t<T>{ offset };
+			}
 		}
 
-		//void read(size_val_t& obj) {
-		//	read_as<AddrType>(obj);
-		//}
+		void read(size_val_t& obj) {
+			read_as<AddrType>(obj);
+		}
 
-		//void read(ptrdiff_val_t& obj) {
-		//	read_as<AddrType>(obj);
-		//}
+		void read(ptrdiff_val_t& obj) {
+			read_as<AddrType>(obj);
+		}
 
 		template<typename U, bool byteswap = true, typename T = U>
 		void read_as(T& obj) {

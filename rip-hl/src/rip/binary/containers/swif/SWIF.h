@@ -12,7 +12,7 @@ namespace rip::binary::containers::swif::v1 {
 	struct TextureListArray {};
 
 	inline size_t GetTextureListCount(const int& parent) { return gTextureListCount; }
-	template<typename T> using TextureListArrayRefl = ::simplerfl::dynamic_carray<T, int, GetTextureListCount>;
+	template<typename T> using TextureListArrayRefl = ::simplerfl::dynamic_carray<T, ::simplerfl::selector_resolver<size_t, int, GetTextureListCount>>;
 
     struct SRS_CHUNK_HEADER {
         unsigned int magic;

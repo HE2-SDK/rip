@@ -2,56 +2,56 @@
 #include <type_traits>
 #include <ucsl-reflection/reflections/basic-types.h>
 #include <ucsl-reflection/traversals/types.h>
-#include <ucsl-reflection/traversals/traversal.h>
+#include <ucsl-reflection/traversals/fold.h>
 #include <ucsl-reflection/opaque.h>
 #include <rip/binary/types.h>
 #include <rip/util/memory.h>
 #include "BlobWorker.h"
 #include <iostream>
 
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector2& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector3& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector4& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Quaternion& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix34& dt) {
-	return os << "[a matrix34]";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix44& dt) {
-	return os << "[a matrix44]";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Position& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::math::Rotation& dt) {
-	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ", " << dt.w() << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::strings::VariableString& dt) {
-	return os << dt.c_str();
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV1& dt) {
-	return os << dt.id;
-}
-
-std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV2& dt) {
-	return os << dt.groupId << dt.objectId;
-}
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector2& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector3& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector4& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Quaternion& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix34& dt) {
+//	return os << "[a matrix34]";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix44& dt) {
+//	return os << "[a matrix44]";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Position& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::math::Rotation& dt) {
+//	return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ", " << dt.w() << ")";
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::strings::VariableString& dt) {
+//	return os << dt.c_str();
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV1& dt) {
+//	return os << dt.id;
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV2& dt) {
+//	return os << dt.groupId << dt.objectId;
+//}
 
 namespace rip::binary {
 	using namespace ucsl::reflection;
@@ -151,9 +151,9 @@ namespace rip::binary {
 			}
 
 			template<typename T>
-			int visit_primitive(T& obj, const PrimitiveInfo<T>& info) {
+			int visit_primitive_data(T& obj) {
 				state.deserializer.backend.read(obj);
-				std::cout << "read primitive " << obj << std::endl;
+				//std::cout << "read primitive " << obj << std::endl;
 				return 0;
 			}
 
@@ -182,12 +182,12 @@ namespace rip::binary {
 				//}
 			}
 
-			int visit_primitive(const char*& obj, const PrimitiveInfo<const char*>& info) {
+			int visit_primitive_data(const char*& obj) {
 				read_string(obj);
 				return 0;
 			}
 
-			int visit_primitive(ucsl::strings::VariableString& obj, const PrimitiveInfo<ucsl::strings::VariableString>& info) {
+			int visit_primitive_data(ucsl::strings::VariableString& obj) {
 				auto buffer = (const char**)addptr(&obj, 0x0);
 				auto allocator = (size_t*)addptr(&obj, sizeof(size_t));
 
@@ -196,7 +196,7 @@ namespace rip::binary {
 				return 0;
 			}
 
-			int visit_primitive(void*& obj, const PrimitiveInfo<void*>& info) {
+			int visit_primitive_data(void*& obj) {
 				offset_t<opaque_obj> offset{};
 				state.deserializer.backend.read(offset);
 
@@ -213,59 +213,70 @@ namespace rip::binary {
 				return 0;
 			}
 
-			template<typename T, typename O>
-			int visit_enum(T& obj, const EnumInfo<O>& info) {
-				return visit_primitive(obj, PrimitiveInfo<T>{});
+			template<accessors::PrimitiveAccessor T> result_type visit_primitive(T obj) {
+				return visit_primitive_data(obj.value);
 			}
 
-			template<typename T, typename O>
-			int visit_flags(T& obj, const FlagsInfo<O>& info) {
-				return visit_primitive(obj, PrimitiveInfo<T>{});
+			template<typename T> result_type visit_enum(T obj) {
+				return obj.refl.visit([&](auto r) {
+					return visit_primitive_data(static_cast<typename decltype(r)::repr&>(obj.value));
+				});
 			}
 
-			template<typename F, typename C, typename D, typename A>
-			int visit_array(A& arr, const ArrayInfo& info, C c, D d, F f) {
-				auto buffer = (opaque_obj**)addptr(&arr.underlying, sizeof(size_t) * 0);
-				auto length = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 1);
-				auto capacity = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 2);
-				auto allocator = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 3);
-
-				offset_t<opaque_obj> offset{};
-				state.deserializer.backend.read(offset);
-				state.deserializer.backend.read(*length);
-				state.deserializer.backend.read(*capacity);
-				state.deserializer.backend.read(*allocator);
-
-				if (*length == 0)
-					*buffer = nullptr;
-				else
-					enqueueBlock(*buffer, offset, [info, length]() { return BlockAllocationData{ *length * info.itemSize, info.itemAlignment }; }, [length, itemSize = info.itemSize, f](opaque_obj* target) {
-					for (size_t i = 0; i < *length; i++)
-						f(*addptr(target, i * itemSize));
-						});
+			//template<typename T, typename O>
+			//int visit_flags(T& obj, const FlagsInfo<O>& info) {
+			//	return visit_primitive(obj, PrimitiveInfo<T>{});
+			//}
+			template<typename T, typename F> result_type visit_array(T obj) {
+				return 0;
+			}
+			template<typename T, typename F> result_type visit_tarray(T obj) {
 				return 0;
 			}
 
-			template<typename F, typename C, typename D, typename A>
-			int visit_tarray(A& arr, const ArrayInfo& info, C c, D d, F f) {
-				auto buffer = (opaque_obj**)addptr(&arr.underlying, sizeof(size_t) * 0);
-				auto length = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 1);
-				auto capacity = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 2);
+			//template<typename F, typename C, typename D, typename A>
+			//int visit_array(A& arr, const ArrayInfo& info, C c, D d, F f) {
+			//	auto buffer = (opaque_obj**)addptr(&arr.underlying, sizeof(size_t) * 0);
+			//	auto length = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 1);
+			//	auto capacity = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 2);
+			//	auto allocator = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 3);
 
-				offset_t<opaque_obj> offset{};
-				state.deserializer.backend.read(offset);
-				state.deserializer.backend.read(*length);
-				state.deserializer.backend.read(*capacity);
+			//	offset_t<opaque_obj> offset{};
+			//	state.deserializer.backend.read(offset);
+			//	state.deserializer.backend.read(*length);
+			//	state.deserializer.backend.read(*capacity);
+			//	state.deserializer.backend.read(*allocator);
 
-				if (*length == 0)
-					*buffer = nullptr;
-				else
-					enqueueBlock(*buffer, offset, [info, length]() { return BlockAllocationData{ *length * info.itemSize, info.itemAlignment }; }, [length, itemSize = info.itemSize, f](opaque_obj* target) {
-						for (size_t i = 0; i < *length; i++)
-							f(*addptr(target, i * itemSize));
-					});
-				return 0;
-			}
+			//	if (*length == 0)
+			//		*buffer = nullptr;
+			//	else
+			//		enqueueBlock(*buffer, offset, [info, length]() { return BlockAllocationData{ *length * info.itemSize, info.itemAlignment }; }, [length, itemSize = info.itemSize, f](opaque_obj* target) {
+			//		for (size_t i = 0; i < *length; i++)
+			//			f(*addptr(target, i * itemSize));
+			//			});
+			//	return 0;
+			//}
+
+			//template<typename F, typename C, typename D, typename A>
+			//int visit_tarray(A& arr, const ArrayInfo& info, C c, D d, F f) {
+			//	auto buffer = (opaque_obj**)addptr(&arr.underlying, sizeof(size_t) * 0);
+			//	auto length = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 1);
+			//	auto capacity = (size_t*)addptr(&arr.underlying, sizeof(size_t) * 2);
+
+			//	offset_t<opaque_obj> offset{};
+			//	state.deserializer.backend.read(offset);
+			//	state.deserializer.backend.read(*length);
+			//	state.deserializer.backend.read(*capacity);
+
+			//	if (*length == 0)
+			//		*buffer = nullptr;
+			//	else
+			//		enqueueBlock(*buffer, offset, [info, length]() { return BlockAllocationData{ *length * info.itemSize, info.itemAlignment }; }, [length, itemSize = info.itemSize, f](opaque_obj* target) {
+			//			for (size_t i = 0; i < *length; i++)
+			//				f(*addptr(target, i * itemSize));
+			//		});
+			//	return 0;
+			//}
 
 			template<typename F, typename A, typename S>
 			int visit_pointer(opaque_obj*& obj, const PointerInfo<A, S>& info, F f) {
