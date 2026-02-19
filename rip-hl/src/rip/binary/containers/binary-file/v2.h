@@ -2,11 +2,11 @@
 #include <bit>
 #include <map>
 #include <ucsl/magic.h>
-#include <ucsl-reflection/providers/simplerfl.h>
+// #include <ucsl-reflection/providers/simplerfl.h>
 #include <rip/binary/stream.h>
 #include <rip/util/byteswap.h>
-#include <rip/binary/serialization/ReflectionDeserializer.h>
-#include <rip/binary/serialization/ReflectionSerializer.h>
+// #include <rip/binary/serialization/ReflectionDeserializer.h>
+// #include <rip/binary/serialization/ReflectionSerializer.h>
 #include <iostream>
 #include <vector>
 #include "common.h"
@@ -51,7 +51,7 @@ namespace rip::binary::containers::binary_file::v2 {
 		chunk_istream(fast_istream& raw_stream, binary_istream<AddressType>& stream, std::endian endianness) : data_istream<AddressType>{ raw_stream, stream, endianness, 0 } {
 			this->stream.read(header);
 			this->stream.skip_padding_bytes(header.additionalHeaderSize);
-			this->offset = this->stream.tellg();
+			this->offset_base = this->stream.tellg();
 			
 			//this->seekg(header.dataSize);
 			//this->readStringTable(header.stringTableSize);
@@ -222,47 +222,47 @@ namespace rip::binary::containers::binary_file::v2 {
 		}
 	};
 
-	template<typename AddrType>
-	class BinaryFileDeserializer {
-		BinaryFileReader<AddrType> container;
+	//template<typename AddrType>
+	//class BinaryFileDeserializer {
+	//	BinaryFileReader<AddrType> container;
 
-	public:
-		BinaryFileDeserializer(std::istream& stream) : container{ stream } {}
+	//public:
+	//	BinaryFileDeserializer(std::istream& stream) : container{ stream } {}
 
-		template<typename GameInterface, typename T, typename R>
-		T* deserialize(R refl) {
-			auto chunk = container.getNextDataChunk();
+	//	template<typename GameInterface, typename T, typename R>
+	//	T* deserialize(R refl) {
+	//		auto chunk = container.getNextDataChunk();
 
-			rip::binary::ReflectionDeserializer<GameInterface, decltype(chunk)> deserializer{chunk};
+	//		rip::binary::ReflectionDeserializer<GameInterface, decltype(chunk)> deserializer{chunk};
 
-			return deserializer.deserialize<T, R>(refl);
-		}
+	//		return deserializer.deserialize<T, R>(refl);
+	//	}
 
-		template<typename GameInterface, typename T>
-		T* deserialize() {
-			return deserialize<GameInterface, T>(ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
-		}
-	};
+	//	template<typename GameInterface, typename T>
+	//	T* deserialize() {
+	//		return deserialize<GameInterface, T>(ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
+	//	}
+	//};
 
-	template<typename AddrType, std::endian endianness = std::endian::native>
-	class BinaryFileSerializer {
-		BinaryFileWriter<AddrType, endianness> container;
+	//template<typename AddrType, std::endian endianness = std::endian::native>
+	//class BinaryFileSerializer {
+	//	BinaryFileWriter<AddrType, endianness> container;
 
-	public:
-		BinaryFileSerializer(std::ostream& stream) : container{ stream } {}
+	//public:
+	//	BinaryFileSerializer(std::ostream& stream) : container{ stream } {}
 
-		template<typename T, typename R>
-		void serialize(T& data, R refl) {
-			auto chunk = container.addDataChunk();
+	//	template<typename T, typename R>
+	//	void serialize(T& data, R refl) {
+	//		auto chunk = container.addDataChunk();
 
-			rip::binary::ReflectionSerializer serializer{ chunk };
+	//		rip::binary::ReflectionSerializer serializer{ chunk };
 
-			serializer.serialize(data, refl);
-		}
+	//		serializer.serialize(data, refl);
+	//	}
 
-		template<typename GameInterface, typename T>
-		void serialize(T& data) {
-			serialize(data, ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
-		}
-	};
+	//	template<typename GameInterface, typename T>
+	//	void serialize(T& data) {
+	//		serialize(data, ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
+	//	}
+	//};
 }

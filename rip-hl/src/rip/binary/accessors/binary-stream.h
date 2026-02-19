@@ -6,18 +6,6 @@
 #include <ucsl-reflection/bound-reflection.h>
 #include <rip/binary/stream.h>
 
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector2& dt) { return os << "(" << dt.x() << ", " << dt.y() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector3& dt) { return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Vector4& dt) { return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Quaternion& dt) { return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << dt.w() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix34& dt) { return os << "[a matrix34]"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Matrix44& dt) { return os << "[a matrix44]"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Position& dt) { return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::math::Rotation& dt) { return os << "(" << dt.x() << ", " << dt.y() << ", " << dt.z() << ", " << dt.w() << ")"; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::strings::VariableString& dt) { return os << dt.c_str(); }
-//std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV1& dt) { return os << dt.id; }
-//std::ostream& operator<<(std::ostream& os, const ucsl::objectids::ObjectIdV2& dt) { return os << dt.groupId << dt.objectId; }
-
 namespace rip::accessors {
 	template<typename Stream>
 	struct binary_istream {
@@ -128,7 +116,7 @@ namespace rip::accessors {
 
 			template<simplerfl::strlit FieldName>
 			inline auto get_field() const {
-				return (*this)[this->refl.get_field<FieldName>()];
+				return (*this)[this->refl.get_field<FieldName>(*this)];
 			}
 
 			inline auto get_base() const {
@@ -150,7 +138,7 @@ namespace rip::accessors {
 			inline auto operator[](size_t idx) const {
 				auto item_refl = this->refl.get_item_type();
 
-				assert(idx < this->refl.get_length());
+				//assert(idx < this->refl.get_length());
 
 				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.get_size(*this) }, item_refl };
 			}
