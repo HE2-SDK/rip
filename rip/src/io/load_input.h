@@ -1,6 +1,6 @@
 #pragma once
 #include <ucsl/rfl/rflclass.h>
-#include <ucsl/resources/material/contexts.h>
+#include <ucsl/resources/material/v3.h>
 #include <ucsl/resources/map/v1.h>
 #include <ucsl/resources/path/v1.h>
 #include <ucsl/resources/sobj/v1.h>

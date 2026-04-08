@@ -67,6 +67,58 @@ namespace rip::binary {
 		}
 	};
 
+	//class mem_istream {
+	//	char* ptr;
+	//	size_t pos;
+
+	//public:
+	//	mem_istream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
+
+	//	void read(char* str, size_t count) {
+	//		memcpy(str, addptr(ptr, pos), count);
+	//		pos += count;
+	//	}
+
+	//	void read_string(std::string& str) {
+	//		str = addptr(ptr, pos);
+	//		pos += str.size() + 1;
+	//	}
+
+	//	void seekg(size_t loc) {
+	//		pos = loc;
+	//	}
+
+	//	size_t tellg() const {
+	//		return pos;
+	//	}
+	//};
+
+	//class mem_ostream {
+	//	char* ptr;
+	//	size_t pos;
+
+	//public:
+	//	mem_ostream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
+
+	//	void write(char* str, size_t count) {
+	//		memcpy(addptr(ptr, pos), str, count);
+	//		pos += count;
+	//	}
+
+	//	void write_string(const char* str) {
+	//		strcpy(addptr(ptr, pos), str);
+	//		pos += strlen(str) + 1;
+	//	}
+
+	//	void seekp(size_t loc) {
+	//		pos = loc;
+	//	}
+
+	//	size_t tellp() const {
+	//		return pos;
+	//	}
+	//};
+
 	template<typename AddrType, bool byteswap_offsets = true, bool relative_offsets = false>
 	class binary_istream {
 	protected:

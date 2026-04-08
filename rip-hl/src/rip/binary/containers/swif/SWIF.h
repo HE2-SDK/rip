@@ -11,8 +11,8 @@ namespace rip::binary::containers::swif::v1 {
 	template<typename T>
 	struct TextureListArray {};
 
-	inline size_t GetTextureListCount(const int& parent) { return gTextureListCount; }
-	template<typename T> using TextureListArrayRefl = ::simplerfl::dynamic_carray<T, ::simplerfl::selector_resolver<size_t, int, GetTextureListCount>>;
+	//inline size_t GetTextureListCount(const int& parent) { return gTextureListCount; }
+	//template<typename T> using TextureListArrayRefl = ::simplerfl::dynamic_carray<T, ::simplerfl::selector_resolver<size_t, int, GetTextureListCount>>;
 
     struct SRS_CHUNK_HEADER {
         unsigned int magic;
@@ -42,9 +42,9 @@ namespace rip::binary::containers::swif::v1 {
     };
 }
 
-namespace simplerfl {
-	template<typename T> struct canonical<rip::binary::containers::swif::v1::TextureListArray<T>> { using type = rip::binary::containers::swif::v1::TextureListArrayRefl<T>; };
-}
+//namespace simplerfl {
+//	template<typename T> struct canonical<rip::binary::containers::swif::v1::TextureListArray<T>> { using type = rip::binary::containers::swif::v1::TextureListArrayRefl<T>; };
+//}
 
 namespace rip::util {
 	template<> inline void byteswap_deep(rip::binary::containers::swif::v1::SRS_BINARY_FILE_HEADER_CHUNK_HEADER& value) noexcept {

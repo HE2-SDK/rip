@@ -28,8 +28,8 @@ target_sources(rip
     PRIVATE
         "main.cpp"
         "config.cpp"
-        "convert.cpp"
-        ${RIP_RESOURCES}
+        # "convert.cpp"
+        # ${RIP_RESOURCES}
     PRIVATE FILE_SET HEADERS FILES
         "io/InputFile.h"
         "io/BinaryInputFile.h"

@@ -19,4 +19,4 @@ target_sources(rip-hl
         "rip/hson/HsonSerializer.h"
         "rip/hson/HsonDeserializer.h"
         "rip/schemas/hedgeset.h"
- "rip/binary/serialization/ReflectCppSerializer.h" "rip/util/object-id-guids.h" "rip/binary/containers/mirage/v1.h" "rip/binary/containers/mirage/v2.h" "rip/hson/JsonReflections.h" "rip/util/math.h" "rip/binary/containers/needle-archive/v1.h" "rip/binary/accessors/binary-stream.h" "rip/binary/accessors/json.h" "rip/binary/containers/ntsi/v1.h" "rip/binary/containers/ntsp/v1.h" )
+ "rip/binary/serialization/ReflectCppSerializer.h" "rip/util/object-id-guids.h" "rip/binary/containers/mirage/v1.h" "rip/binary/containers/mirage/v2.h" "rip/hson/JsonReflections.h" "rip/util/math.h" "rip/binary/containers/needle-archive/v1.h" "rip/binary/accessors/binary-stream.h" "rip/binary/accessors/json.h" "rip/binary/containers/ntsi/v1.h" "rip/binary/containers/ntsp/v1.h" "rip/binary/serialization2/binary.h")

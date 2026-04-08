@@ -4,7 +4,7 @@
 #include <ucsl/resources/fxcol/v1.h>
 #include <ucsl/resources/svcol/v1.h>
 #include <ucsl/resources/map/v1.h>
-#include <ucsl/resources/material/contexts.h>
+//#include <ucsl/resources/material/contexts.h>
 #include <ucsl/resources/object-world/v2.h>
 #include <ucsl/resources/object-world/v3.h>
 #include <ucsl/resources/rfl/v1.h>
@@ -17,7 +17,7 @@
 #include <ucsl/resources/nxs/v1.h>
 #include <ucsl/resources/path/v1.h>
 #include <ucsl/resources/path/v200.h>
-#include <ucsl/resources/pcmodel/v2.h>
+#include <ucsl/resources/pointcloud/v2.h>
 #include <ucsl/resources/master-level/v0.h>
 #include <ucsl/resources/density-setting/v11.h>
 #include <ucsl/resources/aism/v0.h>
@@ -26,7 +26,7 @@
 #include <ucsl-reflection/reflections/resources/fxcol/v1.h>
 #include <ucsl-reflection/reflections/resources/svcol/v1.h>
 #include <ucsl-reflection/reflections/resources/map/v1.h>
-#include <ucsl-reflection/reflections/resources/material/contexts.h>
+//#include <ucsl-reflection/reflections/resources/material/contexts.h>
 #include <ucsl-reflection/reflections/resources/object-world/v2.h>
 #include <ucsl-reflection/reflections/resources/object-world/v3.h>
 #include <ucsl-reflection/reflections/resources/rfl/v1.h>
@@ -39,7 +39,7 @@
 #include <ucsl-reflection/reflections/resources/nxs/v1.h>
 #include <ucsl-reflection/reflections/resources/path/v1.h>
 #include <ucsl-reflection/reflections/resources/path/v200.h>
-#include <ucsl-reflection/reflections/resources/pcmodel/v2.h>
+#include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
 #include <ucsl-reflection/reflections/resources/master-level/v0.h>
 #include <ucsl-reflection/reflections/resources/density-setting/v11.h>
 #include <ucsl-reflection/reflections/resources/aism/v0.h>
@@ -50,13 +50,13 @@
 #include <string_view>
 #include "config.h"
 
-inline const char* get_rfl1_class(const ucsl::resources::rfl::v1::Ref1Data<>& parent) { return Config::rflClass.c_str(); }
-inline const char* get_rfl2_class(const ucsl::resources::rfl::v2::Ref2Data<>& parent) { return Config::rflClass.c_str(); }
-
-namespace simplerfl {
-	template<> struct canonical<ucsl::resources::rfl::v1::Ref1Data<>> { using type = ucsl::resources::rfl::v1::reflections::Ref1Data<ucsl::resources::rfl::v1::Ref1RflData, get_rfl1_class>; };
-	template<> struct canonical<ucsl::resources::rfl::v2::Ref2Data<>> { using type = ucsl::resources::rfl::v2::reflections::Ref2Data<ucsl::resources::rfl::v2::Ref2RflData, get_rfl2_class>; };
-}
+//inline const char* get_rfl1_class(const ucsl::resources::rfl::v1::Ref1Data<>& parent) { return Config::rflClass.c_str(); }
+//inline const char* get_rfl2_class(const ucsl::resources::rfl::v2::Ref2Data<>& parent) { return Config::rflClass.c_str(); }
+//
+//namespace simplerfl {
+//	template<> struct canonical<ucsl::resources::rfl::v1::Ref1Data<>> { using type = ucsl::resources::rfl::v1::reflections::Ref1Data<ucsl::resources::rfl::v1::Ref1RflData, get_rfl1_class>; };
+//	template<> struct canonical<ucsl::resources::rfl::v2::Ref2Data<>> { using type = ucsl::resources::rfl::v2::reflections::Ref2Data<ucsl::resources::rfl::v2::Ref2RflData, get_rfl2_class>; };
+//}
 
 namespace rip::cli::convert {
 	template <size_t N>
@@ -97,15 +97,15 @@ namespace rip::cli::convert {
 			version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
 		>;
 
-		using material = resource<ResourceType::MATERIAL, "2",
-			version<"1", ucsl::resources::material::contexts::ContextsData>,
-			version<"2", ucsl::resources::material::contexts::ContextsData>
-		>;
+		//using material = resource<ResourceType::MATERIAL, "2",
+		//	version<"1", ucsl::resources::material::contexts::ContextsData>,
+		//	version<"2", ucsl::resources::material::contexts::ContextsData>
+		//>;
 
-		using rfl = resource<ResourceType::RFL, "2-1.00",
-			version<"1", ucsl::resources::rfl::v1::Ref1Data<>>,
-			version<"2-1.00", ucsl::resources::rfl::v2::Ref2Data<>>
-		>;
+		//using rfl = resource<ResourceType::RFL, "2-1.00",
+		//	version<"1", ucsl::resources::rfl::v1::Ref1Data<>>,
+		//	version<"2-1.00", ucsl::resources::rfl::v2::Ref2Data<>>
+		//>;
 
 		using vat = resource<ResourceType::VAT, "1-miller",
 			version<"1-rangers", ucsl::resources::vertex_animation_texture::v1_rangers::VertexAnimationTextureData>,
@@ -135,7 +135,7 @@ namespace rip::cli::convert {
 			version<"2.00", ucsl::resources::path::v200::PathsData>
 		>;
 		using pcmodel = resource<ResourceType::PCMODEL, "2",
-			version<"2", ucsl::resources::pcmodel::v2::PointCloudModelData>
+			version<"2", ucsl::resources::pointcloud::v2::PointcloudData>
 		>;
 		using mlevel = resource<ResourceType::MASTER_LEVEL, "0",
 			version<"0", ucsl::resources::master_level::v0::MasterLevelData>
@@ -148,22 +148,22 @@ namespace rip::cli::convert {
 		>;
 
 		using all = std::tuple<
-			animation_state_machine,
-			gedit,
-			map,
-			material,
-			rfl,
-			vat,
-			fxcol,
-			svcol,
-			swif,
-			sobj,
-			nxs,
-			path,
-			pcmodel,
-			mlevel,
-			density_setting,
-			aism
+			animation_state_machine
+			//gedit,
+			//map,
+			////material,
+			//rfl,
+			//vat,
+			//fxcol,
+			//svcol,
+			//swif,
+			//sobj,
+			//nxs,
+			//path,
+			//pcmodel,
+			//mlevel,
+			//density_setting,
+			//aism
 		>;
 	}
 }

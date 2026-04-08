@@ -1,13 +1,22 @@
 #include <config.h>
-#include <io/load_hedgeset_template.h>
-#include <io/load_input.h>
-#include <io/write_output.h>
-#include <convert.h>
+#include <io/mem_stream.h>
+//#include <io/load_hedgeset_template.h>
+//#include <io/load_input.h>
+//#include <io/write_output.h>
+//#include <convert.h>
 #include <util.h>
 #include <CLI/CLI.hpp>
 #include <iostream>
 #include <map>
-#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
+#undef SYNCHRONIZE
+#undef VOID
+#include <ucsl-reflection/reflections/resources/cemt/v100000.h>
+#include <rip/binary/containers/binary-file/v2.h>
+#include <rip/binary/accessors/binary-stream.h>
+#include <rip/binary/serialization2/json.h>
+#include <ucsl-reflection/traversals/fold.h>
+#include <ucsl-reflection/providers/simplerfl.h>
+#include <ucsl-reflection/bound-reflection.h>
 
 std::map<std::string, Format> formatMap{
 	{ "binary", Format::BINARY },
@@ -79,10 +88,44 @@ int main(int argc, char** argv) {
 
 		ucsl::reflection::game_interfaces::standalone::StandaloneGameInterface::boot();
 
-		if (!config.hedgesetTemplate.empty())
-			loadHedgesetTemplate(config);
+		//if (!config.hedgesetTemplate.empty())
+		//	loadHedgesetTemplate(config);
 
-		rip::cli::convert::convert(config);
+		std::ifstream ifs{ config.inputFile, std::ios::binary | std::ios::ate };
+		size_t fileSize = ifs.tellg();
+
+		std::unique_ptr<uint8_t[]> fileData = std::make_unique<uint8_t[]>(fileSize);
+
+		ifs.seekg(std::ios::beg);
+		ifs.read((char*)&fileData[0], fileSize);
+
+		imemstream ims{ (char*)&fileData[0], fileSize };
+
+		yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+
+		ucsl::reflection::providers::BoundProvider::RootType refl{ ucsl::reflection::providers::simplerfl<GI>::Type<ucsl::resources::cemt::v100000::reflections::EffectParam>{} };
+		//rip::binary::containers::binary_file::v2::BinaryFileReader<size_t> binFileReader{ ims };
+
+		//auto chunk = binFileReader.getNextDataChunk();
+
+		rip::binary::fast_istream fis{ ims };
+		rip::binary::binary_istream<size_t> bis{ fis };
+
+		rip::accessors::binary_istream<decltype(bis)>::ValueAccessor<decltype(refl)> acc{ bis, refl };
+		rip::binary::SerializeJson<false> serialize{ doc };
+		yyjson_mut_val* result = serialize.process(acc);
+
+		yyjson_mut_doc_set_root(doc, result);
+
+		yyjson_write_err err;
+		std::string filename = config.getOutputFile().generic_string();
+		yyjson_mut_write_file(filename.c_str(), doc, YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_ALLOW_INF_AND_NAN | YYJSON_WRITE_ALLOW_INVALID_UNICODE, nullptr, &err);
+
+		if (err.code != YYJSON_WRITE_SUCCESS) {
+			std::cerr << "Error writing json: " << err.msg << std::endl;
+		}
+
+		yyjson_mut_doc_free(doc);
 
 		std::cerr << "Conversion successful." << std::endl;
 	}

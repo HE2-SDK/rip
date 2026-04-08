@@ -18,8 +18,8 @@ namespace rip::accessors {
 			inline Reference(Stream& stream, size_t offset) : stream{ stream }, offset{ offset } {}
 			inline Reference(Stream& stream) : stream{ stream }, offset{ stream.tellg() } {}
 
-			auto withStream(auto f) const {
-				size_t prevOff{ offset };
+			inline auto withStream(auto f) const {
+				auto prevOff = stream.tellg();
 				stream.seekg(offset);
 				auto res = f(stream);
 				stream.seekg(prevOff);
@@ -31,7 +31,7 @@ namespace rip::accessors {
 		class AccessorBase {
 		public:
 			Reference reference;
-			Refl refl;
+			const Refl refl;
 
 			inline AccessorBase(Reference reference, const Refl& refl) : reference{ reference }, refl{ refl } {}
 		};
@@ -44,7 +44,7 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			operator std::conditional_t<std::is_same_v<typename Refl::repr, const char*>,std::string,typename Refl::repr>() const {
+			inline operator std::conditional_t<std::is_same_v<typename Refl::repr, const char*>,std::string,typename Refl::repr>() const {
 				if constexpr (std::is_same_v<typename Refl::repr, const char*>) {
 					return this->reference.withStream([&](auto& stream) {
 						rip::binary::offset_t<const char> offset{};
@@ -93,7 +93,7 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 			
-			operator long long () const {
+			inline operator long long () const {
 				return this->refl.visit([&](auto r){
 					PrimitiveDataAccessor<decltype(r)> pd{ this->reference, r };
 
@@ -157,6 +157,33 @@ namespace rip::accessors {
 					stream.read(offset);
 
 					return !offset.has_value() ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ { this->reference.stream, offset.value() }, target_type });
+				});
+			}
+		};
+
+		template<typename Refl>
+		class UnionAccessor : public AccessorBase<Refl> {
+		public:
+			using AccessorBase<Refl>::AccessorBase;
+
+			template<typename FieldRefl>
+			inline auto operator[](const FieldRefl& field_refl) const {
+				auto type = field_refl.get_type(*this);
+
+				return this->refl.visit_current_field([&](auto r) { if constexpr (std::is_same_v<decltype(r), FieldRefl>) return ValueAccessor<decltype(r)>{ this->reference, type }; else static_assert(false, "not the correct structure type"); });
+			}
+
+			template<simplerfl::strlit FieldName>
+			inline auto get_field() const {
+				return (*this)[this->refl.get_field<FieldName>(*this)];
+			}
+
+			template<typename F>
+			inline const auto visit(F f) const {
+				return this->refl.visit_current_field([&](auto field_refl) {
+					auto type = field_refl.get_type();
+
+					return f(ValueAccessor<decltype(type)>{ this->reference, type });
 				});
 			}
 		};
@@ -261,7 +288,7 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			const auto visit(auto f) const {
+			inline const auto visit(auto f) const {
 				return this->refl.visit([&](auto r) {
 					if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return f(PrimitiveAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return f(EnumAccessor<decltype(r)>{ this->reference, r });
@@ -270,13 +297,13 @@ namespace rip::accessors {
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return f(ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return f(PointerAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return f(CArrayAccessor<decltype(r)>{ this->reference, r });
-					//else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return f(union(this->reference, parent, r));
+					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return f(UnionAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return f(StructureAccessor<decltype(r)>{ this->reference, r });
 					else static_assert(false, "invalid type kind");
 				});
 			}
 
-			auto visit(auto f) {
+			inline auto visit(auto f) {
 				return this->refl.visit([&](auto r) {
 					if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return f(PrimitiveAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return f(EnumAccessor<decltype(r)>{ this->reference, r });
@@ -285,37 +312,41 @@ namespace rip::accessors {
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return f(ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return f(PointerAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return f(CArrayAccessor<decltype(r)>{ this->reference, r });
-					//else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return f(union(this->reference, parent, r));
+					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return f(UnionAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return f(StructureAccessor<decltype(r)>{ this->reference, r });
 					else static_assert(false, "invalid type kind");
 				});
 			}
 
-			auto as_primitive() {
+			inline auto as_primitive() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return PrimitiveAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a primitive"); });
 			}
 
-			auto as_enum() {
+			inline auto as_enum() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return EnumAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not an enum"); });
 			}
 
-			auto as_array() {
+			inline auto as_array() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ARRAY) return ArrayAccessor<ucsl::containers::arrays::Array, decltype(r)>{ this->reference, r }; else static_assert(false, "not a array"); });
 			}
 
-			auto as_tarray() {
+			inline auto as_tarray() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r }; else static_assert(false, "not a tarray"); });
 			}
 
-			auto as_carray() {
+			inline auto as_carray() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return CArrayAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a carray"); });
 			}
 
-			auto as_pointer() {
+			inline auto as_pointer() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return PointerAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a pointer"); });
 			}
 
-			auto as_structure() {
+			inline auto as_union() {
+				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return UnionAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a union"); });
+			}
+
+			inline auto as_structure() {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return StructureAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a structure"); });
 			}
 		};

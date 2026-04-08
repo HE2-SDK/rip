@@ -67,7 +67,7 @@ protected:
 
     int_type overflow(int_type c = traits_type::eof()) override
     {
-        assert(this->pptr() != nullptr);
+        //assert(this->pptr() != nullptr);
 
         // check if incoming character is not EOF
         // also, we might not overflow the buffer
@@ -87,8 +87,8 @@ protected:
         static const off_type BAD_OFFSET(-1);
 
         // depending on which pointer we move, it must be set
-        assert(which & std::ios::in ? this->gptr() != nullptr : true);
-        assert(which & std::ios::out ? this->pptr() != nullptr : true);
+        //assert(which & std::ios::in ? this->gptr() != nullptr : true);
+        //assert(which & std::ios::out ? this->pptr() != nullptr : true);
 
         // do not seek over the length of buffer
         if (pos <= pos_type(this->egptr() - this->eback()))
@@ -125,8 +125,8 @@ protected:
         static const off_type BAD_OFFSET(-1);
 
         // depending on which pointer we move, it must be set
-        assert(which & std::ios::in ? this->gptr() != nullptr : true);
-        assert(which & std::ios::out ? this->pptr() != nullptr : true);
+        //assert(which & std::ios::in ? this->gptr() != nullptr : true);
+        //assert(which & std::ios::out ? this->pptr() != nullptr : true);
 
         if (which & std::ios::in)
         {
@@ -197,7 +197,7 @@ protected:
 
     int_type pbackfail(int_type c = traits_type::eof()) override
     {
-        assert(this->gptr() != nullptr);
+        //assert(this->gptr() != nullptr);
 
         // put an element back to stream
         if (this->gptr() <= this->eback() ||  // do not underflow
