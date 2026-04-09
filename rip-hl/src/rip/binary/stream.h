@@ -210,12 +210,12 @@ namespace rip::binary {
 				stream.write(reinterpret_cast<const char*>(&obj), sizeof(T));
 		}
 
-		template<typename T, bool byteswap = true>
-		void write(T&& obj) {
-			if constexpr (byteswap)
-				util::byteswap_deep_to_native(endianness, obj);
-			stream.write(reinterpret_cast<const char*>(&obj), sizeof(T));
-		}
+		//template<typename T, bool byteswap = true>
+		//void write(T&& obj) {
+		//	if constexpr (byteswap)
+		//		util::byteswap_deep_to_native(endianness, obj);
+		//	stream.write(reinterpret_cast<const char*>(&obj), sizeof(T));
+		//}
 
 		template<typename T>
 		void write(const offset_t<T>& obj) {

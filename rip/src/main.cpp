@@ -14,6 +14,7 @@
 #include <rip/binary/containers/binary-file/v2.h>
 #include <rip/binary/accessors/binary-stream.h>
 #include <rip/binary/serialization2/json.h>
+#include <rip/binary/serialization2/binary.h>
 #include <ucsl-reflection/traversals/fold.h>
 #include <ucsl-reflection/providers/simplerfl.h>
 #include <ucsl-reflection/bound-reflection.h>
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
 
 		imemstream ims{ (char*)&fileData[0], fileSize };
 
-		yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+		//yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 
 		ucsl::reflection::providers::BoundProvider::RootType refl{ ucsl::reflection::providers::simplerfl<GI>::Type<ucsl::resources::cemt::v100000::reflections::EffectParam>{} };
 		//rip::binary::containers::binary_file::v2::BinaryFileReader<size_t> binFileReader{ ims };
@@ -112,20 +113,25 @@ int main(int argc, char** argv) {
 		rip::binary::binary_istream<size_t> bis{ fis };
 
 		rip::accessors::binary_istream<decltype(bis)>::ValueAccessor<decltype(refl)> acc{ bis, refl };
-		rip::binary::SerializeJson<false> serialize{ doc };
-		yyjson_mut_val* result = serialize.process(acc);
 
-		yyjson_mut_doc_set_root(doc, result);
+		std::ofstream ofs{ config.getOutputFile().generic_string(), std::ios::binary };
+		rip::binary::fast_ostream fos{ ofs };
+		rip::binary::binary_ostream<size_t> bos{ fos, 0 };
+		rip::binary::BinarySerializer serialize{ bos };
+		serialize.process_root(acc);
+		//yyjson_mut_val* result = serialize.process(acc);
 
-		yyjson_write_err err;
-		std::string filename = config.getOutputFile().generic_string();
-		yyjson_mut_write_file(filename.c_str(), doc, YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_ALLOW_INF_AND_NAN | YYJSON_WRITE_ALLOW_INVALID_UNICODE, nullptr, &err);
+		//yyjson_mut_doc_set_root(doc, result);
 
-		if (err.code != YYJSON_WRITE_SUCCESS) {
-			std::cerr << "Error writing json: " << err.msg << std::endl;
-		}
+		//yyjson_write_err err;
+		//std::string filename = config.getOutputFile().generic_string();
+		//yyjson_mut_write_file(filename.c_str(), doc, YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_ALLOW_INF_AND_NAN | YYJSON_WRITE_ALLOW_INVALID_UNICODE, nullptr, &err);
 
-		yyjson_mut_doc_free(doc);
+		//if (err.code != YYJSON_WRITE_SUCCESS) {
+		//	std::cerr << "Error writing json: " << err.msg << std::endl;
+		//}
+
+		//yyjson_mut_doc_free(doc);
 
 		std::cerr << "Conversion successful." << std::endl;
 	}

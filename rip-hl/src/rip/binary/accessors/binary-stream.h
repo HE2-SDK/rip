@@ -15,8 +15,8 @@ namespace rip::accessors {
 			Stream& stream;
 			size_t offset;
 
-			inline Reference(Stream& stream, size_t offset) : stream{ stream }, offset{ offset } {}
-			inline Reference(Stream& stream) : stream{ stream }, offset{ stream.tellg() } {}
+			constexpr Reference(Stream& stream, size_t offset) : stream{ stream }, offset{ offset } {}
+			constexpr Reference(Stream& stream) : stream{ stream }, offset{ stream.tellg() } {}
 
 			inline auto withStream(auto f) const {
 				auto prevOff = stream.tellg();
@@ -30,10 +30,10 @@ namespace rip::accessors {
 		template<typename Refl>
 		class AccessorBase {
 		public:
-			Reference reference;
+			const Reference reference;
 			const Refl refl;
 
-			inline AccessorBase(Reference reference, const Refl& refl) : reference{ reference }, refl{ refl } {}
+			constexpr AccessorBase(const Reference& reference, const Refl& refl) : reference{ reference }, refl{ refl } {}
 		};
 
 		template<typename Refl>
@@ -78,12 +78,12 @@ namespace rip::accessors {
 			using AccessorBase<Refl>::AccessorBase;
 
 			template<typename F>
-			inline const auto visit(F f) const {
+			constexpr const auto visit(F f) const {
 				return this->refl.visit([&](auto r) { return f(PrimitiveDataAccessor<decltype(r)>{ this->reference, r }); });
 			}
 
 			template<typename T>
-			inline const auto as() const {
+			constexpr const auto as() const {
 				return this->refl.visit([&](auto r) { if constexpr (std::is_same_v<typename decltype(r)::repr, T>) return PrimitiveDataAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not the correct primitive type"); });
 			}
 		};
@@ -93,7 +93,7 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 			
-			inline operator long long () const {
+			operator long long () const {
 				return this->refl.visit([&](auto r){
 					PrimitiveDataAccessor<decltype(r)> pd{ this->reference, r };
 
@@ -108,18 +108,18 @@ namespace rip::accessors {
 			using AccessorBase<Refl>::AccessorBase;
 
 			template<typename FieldRefl>
-			inline auto operator[](const FieldRefl& field_refl) const {
+			constexpr auto operator[](const FieldRefl& field_refl) const {
 				auto type = field_refl.get_type(*this);
 
 				return ValueAccessor<decltype(type)>{ { this->reference.stream, this->reference.offset + field_refl.get_offset() }, type };
 			}
 
 			template<simplerfl::strlit FieldName>
-			inline auto get_field() const {
+			constexpr auto get_field() const {
 				return (*this)[this->refl.get_field<FieldName>(*this)];
 			}
 
-			inline auto get_base() const {
+			constexpr auto get_base() const {
 				auto base = this->refl.get_base();
 
 				return base.has_value() ? std::make_optional(StructureAccessor<std::remove_reference_t<decltype(base.value())>>{ this->reference, base.value() }) : std::nullopt;
@@ -131,11 +131,11 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			inline size_t get_length() const {
+			constexpr size_t get_length() const {
 				return this->refl.get_length();
 			}
 
-			inline auto operator[](size_t idx) const {
+			constexpr auto operator[](size_t idx) const {
 				auto item_refl = this->refl.get_item_type();
 
 				//assert(idx < this->refl.get_length());
@@ -167,19 +167,19 @@ namespace rip::accessors {
 			using AccessorBase<Refl>::AccessorBase;
 
 			template<typename FieldRefl>
-			inline auto operator[](const FieldRefl& field_refl) const {
+			constexpr auto operator[](const FieldRefl& field_refl) const {
 				auto type = field_refl.get_type(*this);
 
 				return this->refl.visit_current_field([&](auto r) { if constexpr (std::is_same_v<decltype(r), FieldRefl>) return ValueAccessor<decltype(r)>{ this->reference, type }; else static_assert(false, "not the correct structure type"); });
 			}
 
 			template<simplerfl::strlit FieldName>
-			inline auto get_field() const {
+			constexpr auto get_field() const {
 				return (*this)[this->refl.get_field<FieldName>(*this)];
 			}
 
 			template<typename F>
-			inline const auto visit(F f) const {
+			constexpr const auto visit(F f) const {
 				return this->refl.visit_current_field([&](auto field_refl) {
 					auto type = field_refl.get_type();
 
@@ -196,38 +196,38 @@ namespace rip::accessors {
 				size_t idx{};
 
 			public:
-				const_iterator(ArrayAccessor& accessor, size_t idx) : accessor{ accessor }, idx{ idx } {}
-				const_iterator(const const_iterator& other) : accessor{ other.accessor }, idx{ other.idx } {}
+				inline const_iterator(ArrayAccessor& accessor, size_t idx) : accessor{ accessor }, idx{ idx } {}
+				inline const_iterator(const const_iterator& other) : accessor{ other.accessor }, idx{ other.idx } {}
 
-				const_iterator& operator++() {
+				inline const_iterator& operator++() {
 					idx++;
 					return *this;
 				}
 
-				const_iterator operator++(int) {
+				inline const_iterator operator++(int) {
 					const_iterator result{ *this };
 					idx++;
 					return result;
 				}
 
-				const_iterator& operator--() {
+				inline const_iterator& operator--() {
 					idx--;
 					return *this;
 				}
 
-				const_iterator operator--(int) {
+				inline const_iterator operator--(int) {
 					const_iterator result{ *this };
 					idx--;
 					return result;
 				}
 
-				bool operator==(const const_iterator& other) const { return idx == other.idx; }
-				bool operator!=(const const_iterator& other) const { return idx != other.idx; }
-				bool operator<(const const_iterator& other) const { return idx < other.idx; }
-				bool operator>(const const_iterator& other) const { return idx > other.idx; }
-				bool operator<=(const const_iterator& other) const { return idx <= other.idx; }
-				bool operator>=(const const_iterator& other) const { return idx >= other.idx; }
-				const auto operator*() const { return accessor[idx]; }
+				inline bool operator==(const const_iterator& other) const { return idx == other.idx; }
+				inline bool operator!=(const const_iterator& other) const { return idx != other.idx; }
+				inline bool operator<(const const_iterator& other) const { return idx < other.idx; }
+				inline bool operator>(const const_iterator& other) const { return idx > other.idx; }
+				inline bool operator<=(const const_iterator& other) const { return idx <= other.idx; }
+				inline bool operator>=(const const_iterator& other) const { return idx >= other.idx; }
+				inline const auto operator*() const { return accessor[idx]; }
 			};
 
 			//template<typename T> OpaqueReflArray(A<T, typename GameInterface::AllocatorSystem>& underlying, Refl refl) : underlying{ static_cast<RflArray<A>&>(underlying) }, refl{ refl } {}
@@ -235,12 +235,12 @@ namespace rip::accessors {
 			
 			using AccessorBase<Refl>::AccessorBase;
 
-			const_iterator begin() const { return { *this, 0 }; }
-			const_iterator cbegin() const { return { *this, 0 }; }
-			const_iterator end() const { return { *this, size() }; }
-			const_iterator cend() const { return { *this, size() }; }
+			inline const_iterator begin() const { return { *this, 0 }; }
+			inline const_iterator cbegin() const { return { *this, 0 }; }
+			inline const_iterator end() const { return { *this, size() }; }
+			inline const_iterator cend() const { return { *this, size() }; }
 
-			const auto operator[](size_t i) const {
+			inline const auto operator[](size_t i) const {
 				return this->reference.withStream([&](auto& stream) {
 					auto item_type = this->refl.get_item_type();
 
@@ -252,7 +252,7 @@ namespace rip::accessors {
 				});
 			}
 
-			size_t size() const {
+			inline size_t size() const {
 				return this->reference.withStream([&](auto& stream) {
 					auto item_type = this->refl.get_item_type();
 
@@ -266,7 +266,7 @@ namespace rip::accessors {
 				});
 			}
 
-			size_t capacity() const {
+			inline size_t capacity() const {
 				return this->reference.withStream([&](auto& stream) {
 					auto item_type = this->refl.get_item_type();
 
@@ -288,7 +288,7 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			inline const auto visit(auto f) const {
+			constexpr const auto visit(auto f) const {
 				return this->refl.visit([&](auto r) {
 					if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return f(PrimitiveAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return f(EnumAccessor<decltype(r)>{ this->reference, r });
@@ -303,7 +303,7 @@ namespace rip::accessors {
 				});
 			}
 
-			inline auto visit(auto f) {
+			constexpr auto visit(auto f) {
 				return this->refl.visit([&](auto r) {
 					if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return f(PrimitiveAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return f(EnumAccessor<decltype(r)>{ this->reference, r });
@@ -318,35 +318,35 @@ namespace rip::accessors {
 				});
 			}
 
-			inline auto as_primitive() {
+			constexpr auto as_primitive() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return PrimitiveAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a primitive"); });
 			}
 
-			inline auto as_enum() {
+			constexpr auto as_enum() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return EnumAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not an enum"); });
 			}
 
-			inline auto as_array() {
+			constexpr auto as_array() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ARRAY) return ArrayAccessor<ucsl::containers::arrays::Array, decltype(r)>{ this->reference, r }; else static_assert(false, "not a array"); });
 			}
 
-			inline auto as_tarray() {
+			constexpr auto as_tarray() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r }; else static_assert(false, "not a tarray"); });
 			}
 
-			inline auto as_carray() {
+			constexpr auto as_carray() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return CArrayAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a carray"); });
 			}
 
-			inline auto as_pointer() {
+			constexpr auto as_pointer() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return PointerAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a pointer"); });
 			}
 
-			inline auto as_union() {
+			constexpr auto as_union() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return UnionAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a union"); });
 			}
 
-			inline auto as_structure() {
+			constexpr auto as_structure() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return StructureAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a structure"); });
 			}
 		};
