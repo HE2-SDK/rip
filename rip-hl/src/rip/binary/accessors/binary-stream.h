@@ -3,7 +3,6 @@
 #include <ucsl/containers/arrays/tarray.h>
 #include <ucsl-reflection/providers/types.h>
 #include <ucsl-reflection/util/memory.h>
-#include <ucsl-reflection/bound-reflection.h>
 #include <rip/binary/stream.h>
 
 namespace rip::accessors {
@@ -100,6 +99,16 @@ namespace rip::accessors {
 					return static_cast<long long>(pd);
 				});
 			}
+
+			template<typename F>
+			constexpr const auto visit(F f) const {
+				return this->refl.visit([&](auto r) { return f(PrimitiveDataAccessor<decltype(r)>{ this->reference, r }); });
+			}
+
+			template<typename T>
+			constexpr const auto as() const {
+				return this->refl.visit([&](auto r) { if constexpr (std::is_same_v<typename decltype(r)::repr, T>) return PrimitiveDataAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not the correct primitive type"); });
+			}
 		};
 
 		template<typename Refl>
@@ -140,7 +149,7 @@ namespace rip::accessors {
 
 				//assert(idx < this->refl.get_length());
 
-				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.get_size(*this) }, item_refl };
+				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.get_size(ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset }, item_refl }) }, item_refl };
 			}
 		};
 

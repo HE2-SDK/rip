@@ -174,7 +174,7 @@ namespace rip::binary::containers::binary_file::v2 {
 		}
 
 		void resolveAddresses() {
-			forEachChunk([=](ChunkHeader* chunk) {
+			forEachChunk([=, this](ChunkHeader* chunk) {
 				void* dataStart = addptr(chunk, sizeof(ChunkHeader) + chunk->additionalHeaderSize);
 				void* offsetLoc = dataStart;
 				void* offsetsStart = addptr(chunk, sizeof(ChunkHeader) + chunk->additionalHeaderSize + chunk->dataSize + chunk->stringTableSize);

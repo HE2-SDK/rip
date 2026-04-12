@@ -45,6 +45,7 @@ namespace rip::binary {
 
 				assert(backend.tellp() == offset + bufferSize);
 			});
+
 			//knownPtrs[ptr] = { offset, bufferSize };
 			return offset;
 		}
@@ -68,8 +69,13 @@ namespace rip::binary {
 				}));
 		}
 
-		inline void process_primitive_data(const char*& obj, bool erased) {
-			write_string(obj);
+		inline void write_string(const std::string& obj) {
+			if constexpr (Backend::hasNativeStrings)
+				backend.write(obj.c_str());
+			else
+				backend.write(enqueueBlock<char>(obj.size() + 1, 1, [this, obj]() {
+					backend.write_string(obj.c_str());
+				}));
 		}
 
 		inline void process_primitive_data(ucsl::strings::VariableString& obj, bool erased) {
@@ -95,8 +101,9 @@ namespace rip::binary {
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline void process_primitive(const T& obj) {
 			obj.visit([&](auto data) {
-				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*>)
-					process_primitive_data(std::string{ data }.c_str(), data.refl.is_erased);
+				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*>) {
+					write_string(std::string{ data });
+				}
 				else
 					process_primitive_data(typename decltype(data.refl)::repr{ data }, data.refl.is_erased);
 			});
@@ -104,7 +111,9 @@ namespace rip::binary {
 
 		template<typename T>
 		inline void process_enum(const T& obj) {
-			//process_primitive(obj);
+			obj.refl.visit([&](auto refl) {
+				process_primitive_data(static_cast<decltype(refl)::repr>(static_cast<long long>(obj)), refl.is_erased);
+			});
 		}
 
 		//template<typename T>
@@ -163,16 +172,16 @@ namespace rip::binary {
 
 			size_t typeStart = backend.tellp();
 
-			return obj.visit([&](auto v) {
-				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) return process_primitive(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) return process_enum(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::FLAGS) return process_flags(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) return process_array(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) return process_tarray(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) return process_carray(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::POINTER) return process_pointer(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::UNION) return process_union(v);
-				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::STRUCTURE) return process_struct(v);
+			obj.visit([&](auto v) {
+				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) process_primitive(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) process_enum(v);
+				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::FLAGS) process_flags(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) process_array(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) process_tarray(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) process_carray(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::POINTER) process_pointer(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::UNION) process_union(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::STRUCTURE) process_struct(v);
 				else static_assert(false, "invalid type kind");
 			});
 

@@ -119,14 +119,14 @@ namespace rip::binary {
 	//	}
 	//};
 
-	template<typename AddrType, bool byteswap_offsets = true, bool relative_offsets = false>
+	template<typename AddrType_, bool byteswap_offsets = true, bool relative_offsets = false>
 	class binary_istream {
 	protected:
 		fast_istream& stream;
 		size_t offset_base;
 
 	public:
-		typedef AddrType AddrType;
+		typedef AddrType_ AddrType;
 		std::endian endianness;
 
 		binary_istream(fast_istream& stream, std::endian endianness = std::endian::native, size_t offset_base = 0) : stream{ stream }, endianness{ endianness }, offset_base{ offset_base } {}
@@ -197,6 +197,8 @@ namespace rip::binary {
 		size_t offset;
 
 	public:
+		static constexpr bool hasNativeStrings = false;
+
 		binary_ostream(fast_ostream& stream, size_t offset = 0) : stream{ stream }, offset{ offset } {}
 
 		template<typename T, bool byteswap = true>

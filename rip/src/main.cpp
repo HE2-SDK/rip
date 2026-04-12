@@ -13,11 +13,11 @@
 #include <ucsl-reflection/reflections/resources/cemt/v100000.h>
 #include <rip/binary/containers/binary-file/v2.h>
 #include <rip/binary/accessors/binary-stream.h>
+#include <rip/binary/accessors/json.h>
 #include <rip/binary/serialization2/json.h>
 #include <rip/binary/serialization2/binary.h>
 #include <ucsl-reflection/traversals/fold.h>
 #include <ucsl-reflection/providers/simplerfl.h>
-#include <ucsl-reflection/bound-reflection.h>
 
 std::map<std::string, Format> formatMap{
 	{ "binary", Format::BINARY },
@@ -92,33 +92,34 @@ int main(int argc, char** argv) {
 		//if (!config.hedgesetTemplate.empty())
 		//	loadHedgesetTemplate(config);
 
-		std::ifstream ifs{ config.inputFile, std::ios::binary | std::ios::ate };
-		size_t fileSize = ifs.tellg();
+		//std::ifstream ifs{ config.inputFile, std::ios::binary | std::ios::ate };
+		//size_t fileSize = ifs.tellg();
 
-		std::unique_ptr<uint8_t[]> fileData = std::make_unique<uint8_t[]>(fileSize);
+		//std::unique_ptr<uint8_t[]> fileData = std::make_unique<uint8_t[]>(fileSize);
 
-		ifs.seekg(std::ios::beg);
-		ifs.read((char*)&fileData[0], fileSize);
+		//ifs.seekg(std::ios::beg);
+		//ifs.read((char*)&fileData[0], fileSize);
 
-		imemstream ims{ (char*)&fileData[0], fileSize };
+		//imemstream ims{ (char*)&fileData[0], fileSize };
 
-		//yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+		yyjson_doc* doc = yyjson_read_file(config.inputFile.generic_string().c_str(), 0, nullptr, nullptr);
 
-		ucsl::reflection::providers::BoundProvider::RootType refl{ ucsl::reflection::providers::simplerfl<GI>::Type<ucsl::resources::cemt::v100000::reflections::EffectParam>{} };
-		//rip::binary::containers::binary_file::v2::BinaryFileReader<size_t> binFileReader{ ims };
+		ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::cemt::v100000::reflections::EffectParam> refl{};
 
-		//auto chunk = binFileReader.getNextDataChunk();
+		//rip::binary::fast_istream fis{ ims };
+		//rip::binary::binary_istream<size_t> bis{ fis };
+		//rip::accessors::binary_istream<decltype(bis)>::ValueAccessor<decltype(refl)> acc{ bis, refl };
 
-		rip::binary::fast_istream fis{ ims };
-		rip::binary::binary_istream<size_t> bis{ fis };
-
-		rip::accessors::binary_istream<decltype(bis)>::ValueAccessor<decltype(refl)> acc{ bis, refl };
+		rip::binary::accessors::json<false>::ValueAccessor<decltype(refl)> acc{ doc, refl };
 
 		std::ofstream ofs{ config.getOutputFile().generic_string(), std::ios::binary };
 		rip::binary::fast_ostream fos{ ofs };
 		rip::binary::binary_ostream<size_t> bos{ fos, 0 };
 		rip::binary::BinarySerializer serialize{ bos };
 		serialize.process_root(acc);
+
+		//yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+		//rip::binary::SerializeJson<false> serialize{ doc };
 		//yyjson_mut_val* result = serialize.process(acc);
 
 		//yyjson_mut_doc_set_root(doc, result);

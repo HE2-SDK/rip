@@ -84,11 +84,11 @@ namespace rip::binary::containers::binary_file {
 				size_t diff = offset - last_offset;
 
 				if (diff >= (1 << 16))
-					stream.write<unsigned int, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned int>((diff >> 2u) | (3u << 30u))));
+					stream.template write<unsigned int, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned int>((diff >> 2u) | (3u << 30u))));
 				else if (diff >= (1 << 8))
-					stream.write<unsigned short, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned short>((diff >> 2u) | (2u << 14u))));
+					stream.template write<unsigned short, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned short>((diff >> 2u) | (2u << 14u))));
 				else
-					stream.write<unsigned char, false>(static_cast<unsigned char>((diff >> 2u) | (1u << 6u)));
+					stream.template write<unsigned char, false>(static_cast<unsigned char>((diff >> 2u) | (1u << 6u)));
 
 				last_offset = offset;
 			}

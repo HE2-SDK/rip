@@ -278,22 +278,21 @@ namespace rip::binary {
 		template<ucsl::reflection::accessors::ValueAccessor T>
 		inline yyjson_mut_val* process_type(const T& obj) {
 			return obj.visit([&](auto v) {
-				//if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) return process_primitive(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) return process_enum(v);
+				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) return process_primitive(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) return process_enum(v);
 				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::FLAGS) return process_flags(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) return process_array(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) return process_tarray(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) return process_carray(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::POINTER) return process_pointer(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::UNION) return process_union(v);
-				//else
-				if constexpr (decltype(v.refl)::kind == providers::TypeKind::STRUCTURE) return process_struct(v);
-				else return nullptr;// static_assert(false, "invalid type kind");
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) return process_array(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) return process_tarray(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) return process_carray(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::POINTER) return process_pointer(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::UNION) return process_union(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::STRUCTURE) return process_struct(v);
+				else static_assert(false, "invalid type kind");
 			});
 		}
 
 	public:
-		SerializeJson(yyjson_mut_doc* doc) : doc{ doc } {}
+		JsonSerializer(yyjson_mut_doc* doc) : doc{ doc } {}
 
 		template<ucsl::reflection::accessors::ValueAccessor T>
 		inline yyjson_mut_val* process(T obj) {
