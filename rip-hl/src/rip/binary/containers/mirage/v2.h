@@ -49,11 +49,10 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::mirage::v2 {
-	template<typename AddressType, bool byteswap_offsets = true, bool relative_offsets = false>
+	template<typename BinaryInputStreamType>
     class MirageResourceImageReader {
     private:
-        fast_istream raw_stream;
-        binary_istream<AddressType, byteswap_offsets, relative_offsets> stream;
+        BinaryInputStreamType stream;
         FileHeader header;
         std::endian endianness{ std::endian::big };
         size_t offsetBase;
@@ -81,7 +80,7 @@ namespace rip::binary::containers::mirage::v2 {
                 return header.nodeSizeAndFlags & NodeHeader::LAST_CHILD;
             }
 
-            binary_istream<AddressType, byteswap_offsets, relative_offsets>& get_stream() {
+            BinaryInputStreamType& get_stream() {
                 return imgReader.stream;
             }
 
@@ -104,11 +103,11 @@ namespace rip::binary::containers::mirage::v2 {
             }
         };
 
-        MirageResourceImageReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream, endianness, raw_stream.tellg() + sizeof(FileHeader) } {
+        MirageResourceImageReader(BinaryInputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.endianness, parent_stream.get_raw_stream().tellg() + sizeof(FileHeader) } {
             stream.read(header);
         }
 
-        binary_istream<AddressType, byteswap_offsets, relative_offsets>& get_stream() {
+        BinaryInputStreamType& get_stream() {
             return stream;
         }
 
@@ -117,15 +116,14 @@ namespace rip::binary::containers::mirage::v2 {
         }
     };
 
-    template<typename AddressType, std::endian endianness = std::endian::big>
+    template<typename BinaryOutputStreamType>
     class MirageResourceImageWriter {
     private:
-        fast_ostream raw_stream;
-        binary_ostream<AddressType, endianness> stream;
+        BinaryOutputStreamType stream;
         std::vector<unsigned int> addressLocations{};
 
     public:
-        class node_ostream : public binary_ostream<AddressType, endianness> {
+        class node_ostream : public BinaryOutputStreamType {
         protected:
             MirageResourceImageWriter& writer;
             const ucsl::magic_t<8> magic{};
@@ -134,7 +132,7 @@ namespace rip::binary::containers::mirage::v2 {
             unsigned int flags{};
 
         public:
-            node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, version{ version }, writer{ writer }, binary_ostream<AddressType, endianness>{ writer.raw_stream, 0x10 }, nodeOffset{ this->tellp() }, flags{ flags | (is_last ? NodeHeader::LAST_CHILD : 0) } {
+            node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, version{ version }, writer{ writer }, BinaryOutputStreamType{ writer.stream.get_raw_stream(), 0x10 }, nodeOffset{this->tellp()}, flags{flags | (is_last ? NodeHeader::LAST_CHILD : 0)} {
                 this->write(NodeHeader{});
             }
 
@@ -146,7 +144,7 @@ namespace rip::binary::containers::mirage::v2 {
 
             template<typename T>
             void write(const T& obj) {
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             template<typename T>
@@ -154,7 +152,7 @@ namespace rip::binary::containers::mirage::v2 {
                 if (obj.has_value())
                     writer.addressLocations.push_back(static_cast<unsigned int>(this->tellp()));
 
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             void finish() {
@@ -183,25 +181,17 @@ namespace rip::binary::containers::mirage::v2 {
         public:
             branch_node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, version, writer, flags } {}
 
-            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, 0 };
+            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int version, bool is_last) {
+                return { magic, version, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
 
-            branch_node_ostream add_last_branch_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, NodeHeader::LAST_CHILD };
-            }
-
-            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, 0 };
-            }
-
-            leaf_node_ostream add_last_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, NodeHeader::LAST_CHILD };
+            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version, bool is_last) {
+                return { magic, version, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
         };
 
     public:
-        MirageResourceImageWriter(std::ostream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+        MirageResourceImageWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.get_raw_stream().tellp() + sizeof(FileHeader) } { // I added the offset here. If conversion errors, this is probably the cause.
             stream.write(FileHeader{});
         }
 

@@ -84,89 +84,42 @@ namespace rip::binary::containers::binary_file::v1 {
 	//	void finish();
 	//};
 
-	template<typename AddrType>
+	template<typename RawStreamType, typename AddrType>
 	class BinaryFileReader {
-		fast_istream raw_stream;
-		binary_istream<AddrType> stream;
+		RawStreamType& raw_stream;
+		binary_istream<RawStreamType, AddrType> stream;
 		FileHeader header;
 
 	public:
-		BinaryFileReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+		inline BinaryFileReader(RawStreamType& raw_stream) : raw_stream{ raw_stream }, stream{ raw_stream } {
 			stream.read(header);
 			stream.seekg(0);
 			stream.endianness = header.endianness == 'B' ? std::endian::big : std::endian::little;
 			stream.read(header);
 		}
 
-		data_istream<AddrType> getData() {
-			return { raw_stream, stream, header.endianness == 'B' ? std::endian::big : std::endian::little, 0 };
+		inline data_istream<RawStreamType, AddrType> getData() {
+			return { raw_stream, stream, header.endianness == 'B' ? std::endian::big : std::endian::little };
 		}
 	};
 
+	//template<typename RawStreamType, typename AddrType, std::endian endianness>
 	//class BinaryFileWriter {
-	//	binary_ostream& stream;
-	//	std::endian endianness;
-	//	unsigned short chunkCount{};
+	//	RawStreamType& raw_stream;
+	//	binary_ostream<RawStreamType, AddrType, endianness> stream;
 
 	//public:
-	//	BinaryFileWriter(binary_ostream& stream, std::endian endianness = std::endian::native);
-	//	~BinaryFileWriter();
-	//	chunk_ostream addData();
-	//	void finish();
-	//};
-
-	//class BinaryFileResolver {
-	//	FileHeader* file;
-
-	//	void doByteswaps();
-	//	void resolveAddresses();
-
-	//public:
-	//	BinaryFileResolver(void* file);
-	//	void* getData();
-	//};
-
-	template<typename AddrType>
-	class BinaryFileDeserializer {
-		BinaryFileReader<AddrType> container;
-
-	public:
-		BinaryFileDeserializer(std::istream& stream) : container{ stream } {}
-
-		template<typename GameInterface, typename T, typename R>
-		T* deserialize(R refl) {
-			auto chunk = container.getData();
-
-			rip::binary::ReflectionDeserializer<GameInterface, decltype(chunk)> deserializer{ chunk };
-
-			return deserializer.deserialize<T, R>(refl);
-		}
-
-		template<typename GameInterface, typename T>
-		T* deserialize() {
-			return deserialize<GameInterface, T>(ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
-		}
-	};
-
-	//template<typename AddrType, std::endian endianness = std::endian::native>
-	//class BinaryFileSerializer {
-	//	BinaryFileWriter<AddrType, endianness> container;
-
-	//public:
-	//	BinaryFileSerializer(std::ostream& stream) : container{ stream } {}
-
-	//	template<typename T, typename R>
-	//	void serialize(T& data, R refl) {
-	//		auto chunk = container.addDataChunk();
-
-	//		rip::binary::ReflectionSerializer serializer{ chunk };
-
-	//		serializer.serialize(data, refl);
+	//	inline BinaryFileWriter(RawStreamType& stream) : raw_stream{ raw_stream }, stream{ raw_stream } {
+	//		stream.write(FileHeader{});
 	//	}
 
-	//	template<typename GameInterface, typename T>
-	//	void serialize(T& data) {
-	//		serialize(data, ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
+	//	inline ~BinaryFileWriter() {
+	//		finish();
 	//	}
+
+	//	inline data_ostream< addData() {
+
+	//	}
+	//	inline void finish();
 	//};
 }

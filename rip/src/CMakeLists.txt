@@ -1,20 +1,20 @@
 set(RIP_RESOURCES
     animation_state_machine
-    gedit
-    map
-    material
-    rfl
-    vat
-    fxcol
-    svcol
-    swif
-    sobj
-    nxs
-    path
-    pcmodel
-    mlevel
-    density_setting
-    aism
+    # gedit
+    # map
+    # material
+    # rfl
+    # vat
+    # fxcol
+    # svcol
+    # swif
+    # sobj
+    # nxs
+    # path
+    # pcmodel
+    # mlevel
+    # density_setting
+    # aism
 )
 
 foreach(RIP_RESOURCE IN LISTS RIP_RESOURCES)
@@ -28,8 +28,8 @@ target_sources(rip
     PRIVATE
         "main.cpp"
         "config.cpp"
-        # "convert.cpp"
-        # ${RIP_RESOURCES}
+        "convert.cpp"
+        ${RIP_RESOURCES}
     PRIVATE FILE_SET HEADERS FILES
         "io/InputFile.h"
         "io/BinaryInputFile.h"

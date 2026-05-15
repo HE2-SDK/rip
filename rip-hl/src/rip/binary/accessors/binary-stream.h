@@ -5,7 +5,7 @@
 #include <ucsl-reflection/util/memory.h>
 #include <rip/binary/stream.h>
 
-namespace rip::accessors {
+namespace rip::binary::accessors {
 	template<typename Stream>
 	struct binary_istream {
 		struct opaque_value {};
@@ -140,7 +140,46 @@ namespace rip::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			constexpr size_t get_length() const {
+			class const_iterator {
+				const CArrayAccessor& accessor;
+				size_t idx{};
+
+			public:
+				inline const_iterator(const CArrayAccessor& accessor, size_t idx) : accessor{ accessor }, idx{ idx } {}
+				inline const_iterator(const const_iterator& other) : accessor{ other.accessor }, idx{ other.idx } {}
+
+				inline const_iterator& operator++() {
+					idx++;
+					return *this;
+				}
+
+				inline const_iterator operator++(int) {
+					const_iterator result{ *this };
+					idx++;
+					return result;
+				}
+
+				inline const_iterator& operator--() {
+					idx--;
+					return *this;
+				}
+
+				inline const_iterator operator--(int) {
+					const_iterator result{ *this };
+					idx--;
+					return result;
+				}
+
+				inline bool operator==(const const_iterator& other) const { return idx == other.idx; }
+				inline bool operator!=(const const_iterator& other) const { return idx != other.idx; }
+				inline bool operator<(const const_iterator& other) const { return idx < other.idx; }
+				inline bool operator>(const const_iterator& other) const { return idx > other.idx; }
+				inline bool operator<=(const const_iterator& other) const { return idx <= other.idx; }
+				inline bool operator>=(const const_iterator& other) const { return idx >= other.idx; }
+				inline const auto operator*() const { return accessor[idx]; }
+			};
+
+			constexpr size_t size() const {
 				return this->refl.get_length();
 			}
 
@@ -151,6 +190,11 @@ namespace rip::accessors {
 
 				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.get_size(ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset }, item_refl }) }, item_refl };
 			}
+
+			inline const_iterator begin() const { return { *this, 0 }; }
+			inline const_iterator cbegin() const { return { *this, 0 }; }
+			inline const_iterator end() const { return { *this, size() }; }
+			inline const_iterator cend() const { return { *this, size() }; }
 		};
 
 		template<typename Refl>

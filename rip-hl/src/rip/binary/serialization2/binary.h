@@ -147,9 +147,9 @@ namespace rip::binary {
 		}
 
 		template<ucsl::reflection::accessors::CArrayAccessor T>
-		inline void process_carray(const T& obj) {
-			for (size_t i = 0; i < obj.get_length(); i++)
-				process_type(obj[i]);
+		inline void process_carray(const T& arr) {
+			for (const auto& item : arr)
+				process_type(item);
 		}
 
 		template<ucsl::reflection::accessors::PointerAccessor T>
@@ -209,9 +209,56 @@ namespace rip::binary {
 		BinarySerializer(Backend& backend) : backend{ backend } {}
 
 		template<typename T>
-		inline void process_root(const T& obj) {
+		inline void process(const T& obj) {
 			enqueueBlock<void>(obj.refl.get_size(obj), obj.refl.get_alignment(), [this, obj]() { process_type(obj); });
 			worker.processQueuedBlocks();
 		}
 	};
+
+	template<typename Backend>
+	void serializeBinaryToBinaryStream(Backend& backend, const auto& acc) {
+		BinarySerializer serializer{ backend };
+		serializer.process(acc);
+	}
+
+	template<typename Backend, typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void serializeBinaryToStream(Backend& backend, const auto& acc) {
+		binary_ostream<Backend, AddrType, endianness, byteswap_offsets, relative_offsets> bos{ backend };
+
+		serializeBinaryToBinaryStream(bos, acc);
+	}
+
+	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void serializeBinaryToBuffer(void* buf, const auto& acc) {
+		mem_ostream mos{ buf };
+
+		serializeBinaryToStream<mem_ostream, AddrType, endianness, byteswap_offsets, relative_offsets>(mos, acc);
+	}
+
+	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	size_t measureBinary(const auto& acc) {
+		null_ostream nos{};
+
+		serializeBinaryToStream<null_ostream, AddrType, endianness, byteswap_offsets, relative_offsets>(nos, acc);
+
+		return nos.tellp();
+	}
+
+	template<typename AllocatorSystem, typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void* serializeBinaryToAllocatorSystemBuffer(const auto& acc) {
+		void* buf = new (AllocatorSystem::get_allocator()) uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)];
+
+		serializeBinaryToBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(buf, acc);
+
+		return buf;
+	}
+
+	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void* serializeBinaryToNativeBuffer(const auto& acc) {
+		void* buf = new uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)];
+
+		serializeBinaryToBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(buf, acc);
+
+		return buf;
+	}
 }

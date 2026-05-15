@@ -29,21 +29,20 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::needle_archive::v1 {
-    template<typename AddressType, std::endian endianness = std::endian::big>
+    template<typename BinaryInputStreamType>
     class NeedleArchiveReader {
     public:
         struct ChunkReader {
             ChunkHeader& header;
-            binary_istream<AddressType> stream;
+            binary_istream<typename BinaryInputStreamType::RawStreamType, typename BinaryInputStreamType::AddrType, false, true> stream;
         };
 
     private:
-        fast_istream raw_stream;
-        binary_istream<AddressType> stream;
+        BinaryInputStreamType stream;
         FileHeader header;
 
     public:
-        NeedleArchiveReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream, endianness } {
+        NeedleArchiveReader(BinaryInputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.endianness } {
             stream.read(header);
         }
 
@@ -58,7 +57,7 @@ namespace rip::binary::containers::needle_archive::v1 {
 
                 auto chunkStart = stream.tellg();
                 
-                ChunkReader chunkReader{ header, { raw_stream, endianness, chunkStart } };
+                ChunkReader chunkReader{ header, { stream.get_raw_stream(), stream.endianness, chunkStart } };
 
                 f(chunkReader);
 

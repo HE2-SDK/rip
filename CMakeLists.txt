@@ -8,7 +8,8 @@ FetchContent_Declare(yyjson GIT_REPOSITORY https://github.com/ibireme/yyjson.git
 FetchContent_Declare(reflectcpp GIT_REPOSITORY https://github.com/getml/reflect-cpp.git GIT_TAG v0.16.0 EXCLUDE_FROM_ALL)
 FetchContent_Declare(CLI11 GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git GIT_TAG v2.4.2 EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS 2.4)
 FetchContent_Declare(universal-cslib GIT_REPOSITORY https://github.com/angryzor/universal-cslib.git GIT_TAG v1.0.52 EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS 1.0.52)
-FetchContent_MakeAvailable(yyjson reflectcpp CLI11 universal-cslib)
+FetchContent_Declare(Catch2 GIT_REPOSITORY https://github.com/catchorg/Catch2.git GIT_TAG v3.8.1)
+FetchContent_MakeAvailable(yyjson reflectcpp CLI11 universal-cslib Catch2)
 
 add_subdirectory(rip)
 add_subdirectory(rip-hl)

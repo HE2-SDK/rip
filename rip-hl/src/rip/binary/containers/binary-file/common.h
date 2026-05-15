@@ -6,10 +6,9 @@
 #include <rip/util/byteswap.h>
 
 namespace rip::binary::containers::binary_file {
-	template<typename AddressType>
-	class data_istream : public binary_istream<AddressType> {
+	template<typename RawStreamType, typename AddressType>
+	class data_istream : public binary_istream<RawStreamType, AddressType> {
 	protected:
-		binary_istream<AddressType>& stream;
 		std::map<size_t, std::string> strings{};
 
 		void readStringTable(size_t tableSize) {
@@ -27,15 +26,15 @@ namespace rip::binary::containers::binary_file {
 	public:
 		static constexpr bool hasNativeStrings = true;
 
-		data_istream(fast_istream& raw_stream, binary_istream<AddressType>& stream, std::endian endianness, size_t headerSize) : stream{ stream }, binary_istream<AddressType>{ raw_stream, endianness, stream.tellg() + headerSize } {}
+		data_istream(RawStreamType& raw_stream, std::endian endianness) : binary_istream<RawStreamType, AddressType>{ raw_stream, endianness, raw_stream.tellg() } {}
 
 		template<typename T> void read(T& obj) {
-			binary_istream<AddressType>::read(obj);
+			binary_istream<RawStreamType, AddressType>::read(obj);
 		}
 
 		template<> void read(const char*& obj) {
 			AddressType stroff;
-			binary_istream<AddressType>::read(stroff);
+			binary_istream<RawStreamType, AddressType>::read(stroff);
 
 			if (stroff == 0)
 				obj = nullptr;
@@ -52,10 +51,9 @@ namespace rip::binary::containers::binary_file {
 		}
 	};
 
-	template<typename AddressType, std::endian endianness>
-	class data_ostream : public binary_ostream<AddressType, endianness> {
+	template<typename RawStreamType, typename AddressType, std::endian endianness>
+	class data_ostream : public binary_ostream<RawStreamType, AddressType, endianness> {
 	protected:
-		binary_ostream<AddressType, endianness>& stream;
 		std::vector<std::string> strings{}; // This seems superfluous but it is here to keep the discovery order, to generate a file that is closer to official files.
 		std::map<std::string, std::vector<size_t>> stringOffsets{};
 		std::vector<size_t> offsets{};
@@ -84,25 +82,25 @@ namespace rip::binary::containers::binary_file {
 				size_t diff = offset - last_offset;
 
 				if (diff >= (1 << 16))
-					stream.template write<unsigned int, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned int>((diff >> 2u) | (3u << 30u))));
+					this->template write<unsigned int>(util::byteswap_to_native(std::endian::big, static_cast<unsigned int>((diff >> 2u) | (3u << 30u))));
 				else if (diff >= (1 << 8))
-					stream.template write<unsigned short, false>(util::byteswap_to_native(std::endian::big, static_cast<unsigned short>((diff >> 2u) | (2u << 14u))));
+					this->template write<unsigned short>(util::byteswap_to_native(std::endian::big, static_cast<unsigned short>((diff >> 2u) | (2u << 14u))));
 				else
-					stream.template write<unsigned char, false>(static_cast<unsigned char>((diff >> 2u) | (1u << 6u)));
+					this->template write<unsigned char>(static_cast<unsigned char>((diff >> 2u) | (1u << 6u)));
 
 				last_offset = offset;
 			}
 
-			stream.write_padding(4);
+			this->write_padding(4);
 		}
 
 	public:
 		static constexpr bool hasNativeStrings = true;
 
-		data_ostream(fast_ostream& raw_stream, binary_ostream<AddressType, endianness>& stream, size_t headerSize) : stream{ stream }, binary_ostream<AddressType, endianness>{ raw_stream, raw_stream.tellp() + headerSize } {}
+		data_ostream(RawStreamType& raw_stream) : binary_ostream<RawStreamType, AddressType, endianness>{ raw_stream, raw_stream.tellp() } {}
 
 		template<typename T> void write(const T& obj) {
-			binary_ostream<AddressType, endianness>::write(obj);
+			binary_ostream<RawStreamType, AddressType, endianness>::write(obj);
 		}
 
 		template<typename T> void write(const offset_t<T>& obj) {
@@ -110,7 +108,7 @@ namespace rip::binary::containers::binary_file {
 			//if (obj.has_value())
 			offsets.emplace_back(this->tellp());
 
-			binary_ostream<AddressType, endianness>::write(obj);
+			binary_ostream<RawStreamType, AddressType, endianness>::write(obj);
 		}
 
 		template<> void write(const char* const& obj) {
@@ -127,7 +125,7 @@ namespace rip::binary::containers::binary_file {
 				offsets.emplace_back(this->tellp());
 			}
 
-			binary_ostream<AddressType, endianness>::write(static_cast<AddressType>(0));
+			binary_ostream<RawStreamType, AddressType, endianness>::write(static_cast<AddressType>(0));
 		}
 	};
 }

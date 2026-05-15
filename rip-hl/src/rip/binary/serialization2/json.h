@@ -13,7 +13,7 @@ namespace rip::binary {
 	using namespace ucsl::reflection::traversals;
 
 	template<bool arrayVectors = false>
-	class SerializeJson {
+	class JsonSerializer {
 		yyjson_mut_doc* doc;
 		yyjson_mut_val* currentStruct{};
 
@@ -225,12 +225,10 @@ namespace rip::binary {
 		}
 
 		template<ucsl::reflection::accessors::CArrayAccessor T>
-		inline yyjson_mut_val* process_carray(const T& obj) {
+		inline yyjson_mut_val* process_carray(const T& arr) {
 			yyjson_mut_val* jarr = yyjson_mut_arr(doc);
-			for (size_t i = 0; i < obj.get_length(); i++) {
-				auto item = obj[i];
-				yyjson_mut_arr_add_val(jarr, process_type(item));
-			}
+			for (const auto& obj : arr)
+				yyjson_mut_arr_add_val(jarr, process_type(obj));
 			return jarr;
 		}
 
@@ -295,8 +293,14 @@ namespace rip::binary {
 		JsonSerializer(yyjson_mut_doc* doc) : doc{ doc } {}
 
 		template<ucsl::reflection::accessors::ValueAccessor T>
-		inline yyjson_mut_val* process(T obj) {
+		inline yyjson_mut_val* process(const T& obj) {
 			return process_type(obj);
 		}
 	};
+
+	template<bool arrayVectors = false>
+	inline yyjson_mut_val* serializeJson(yyjson_mut_doc* doc, const auto& acc) {
+		JsonSerializer<arrayVectors> serializer{ doc };
+		return serializer.process(acc);
+	}
 }

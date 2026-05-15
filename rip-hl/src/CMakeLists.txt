@@ -1,6 +1,6 @@
 target_sources(rip-hl
-    PRIVATE
-        "rip/binary/containers/swif/SWIF.cpp"
+#    PRIVATE
+#        "rip/binary/containers/swif/SWIF.cpp"
     PUBLIC FILE_SET HEADERS FILES
         "rip/util/byteswap.h"
         "rip/util/memory.h"
@@ -10,13 +10,41 @@ target_sources(rip-hl
         "rip/binary/containers/binary-file/common.h"
         "rip/binary/containers/binary-file/v1.h"
         "rip/binary/containers/binary-file/v2.h"
+        "rip/binary/containers/mirage/v1.h"
+        "rip/binary/containers/mirage/v2.h"
         "rip/binary/containers/swif/SWIF.h"
-        "rip/binary/serialization/BlobWorker.h"
-        "rip/binary/serialization/JsonSerializer.h"
-        "rip/binary/serialization/JsonDeserializer.h"
-        "rip/binary/serialization/ReflectionSerializer.h"
-        "rip/binary/serialization/ReflectionDeserializer.h"
+        "rip/binary/containers/needle-archive/v1.h"
+        "rip/binary/containers/ntsi/v1.h"
+        "rip/binary/containers/ntsp/v1.h"
+        
+        "rip/binary/accessors/binary-stream.h"
+        "rip/binary/accessors/json.h"
+
+        "rip/binary/serialization2/BlobWorker.h"
+        "rip/binary/serialization2/binary.h"
+        "rip/binary/serialization2/json.h"
+
+        "rip/models/mirage.h"
+        "rip/models/binary-file.h"
+        "rip/models/raw.h"
+        "rip/models/needle-archive.h"
+
+        "rip/serialization/json/forwards.h"
+        "rip/serialization/json/raw.h"
+        "rip/serialization/json/binary-file.h"
+        "rip/serialization/json/mirage.h"
+        "rip/serialization/json/needle-archive.h"
+        "rip/serialization/binary/forwards.h"
+        "rip/serialization/binary/raw.h"
+        "rip/serialization/binary/binary-file.h"
+        "rip/serialization/binary/mirage.h"
+        "rip/serialization/binary/needle-archive.h"
+
         "rip/hson/HsonSerializer.h"
         "rip/hson/HsonDeserializer.h"
         "rip/schemas/hedgeset.h"
- "rip/binary/serialization/ReflectCppSerializer.h" "rip/util/object-id-guids.h" "rip/binary/containers/mirage/v1.h" "rip/binary/containers/mirage/v2.h" "rip/hson/JsonReflections.h" "rip/util/math.h" "rip/binary/containers/needle-archive/v1.h" "rip/binary/accessors/binary-stream.h" "rip/binary/accessors/json.h" "rip/binary/containers/ntsi/v1.h" "rip/binary/containers/ntsp/v1.h" "rip/binary/serialization2/binary.h" "rip/binary/serialization2/BlobWorker.h")
+
+        "rip/util/object-id-guids.h"
+        "rip/hson/JsonReflections.h"
+        "rip/util/math.h"
+)

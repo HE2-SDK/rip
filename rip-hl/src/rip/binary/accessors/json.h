@@ -1312,7 +1312,7 @@ namespace rip::binary::accessors {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			constexpr size_t get_length() const {
+			constexpr size_t size() const {
 				return this->refl.get_length();
 			}
 
@@ -1323,6 +1323,46 @@ namespace rip::binary::accessors {
 
 				return ValueAccessor<decltype(item_refl)>{ { this->reference, idx }, item_refl };
 			}
+
+			class const_iterator {
+				const CArrayAccessor& accessor;
+				size_t idx{};
+				yyjson_val* val{};
+
+			public:
+				inline const_iterator(const CArrayAccessor& accessor, yyjson_val* val, size_t idx) : accessor{ accessor }, val{ val }, idx{ idx } {}
+				inline const_iterator(const const_iterator& other) : accessor{ other.accessor }, val{ other.val }, idx{ other.idx } {}
+
+				inline const_iterator& operator++() {
+					val = unsafe_yyjson_get_next(val);
+					idx++;
+					return *this;
+				}
+
+				inline const_iterator operator++(int) {
+					const_iterator result{ *this };
+					val = unsafe_yyjson_get_next(val);
+					idx++;
+					return result;
+				}
+
+				inline bool operator==(const const_iterator& other) const { return idx == other.idx; }
+				inline bool operator!=(const const_iterator& other) const { return idx != other.idx; }
+				inline bool operator<(const const_iterator& other) const { return idx < other.idx; }
+				inline bool operator>(const const_iterator& other) const { return idx > other.idx; }
+				inline bool operator<=(const const_iterator& other) const { return idx <= other.idx; }
+				inline bool operator>=(const const_iterator& other) const { return idx >= other.idx; }
+				inline const auto operator*() const {
+					auto item_type = accessor.refl.get_item_type();
+
+					return ValueAccessor<decltype(item_type)>{ { accessor.reference, idx, val }, item_type };
+				}
+			};
+
+			inline const_iterator begin() const { return { *this, yyjson_arr_get_first(this->reference), 0 }; }
+			inline const_iterator cbegin() const { return { *this, yyjson_arr_get_first(this->reference), 0 }; }
+			inline const_iterator end() const { return { *this, nullptr, size() }; }
+			inline const_iterator cend() const { return { *this, nullptr, size() }; }
 		};
 
 		template<typename Refl>
@@ -1369,22 +1409,22 @@ namespace rip::binary::accessors {
 		public:
 			class const_iterator {
 				ArrayAccessor& accessor;
-				yyjson_val* cur;
+				yyjson_val* val;
 				size_t idx{};
 
 			public:
-				constexpr const_iterator(ArrayAccessor& accessor, yyjson_val* cur, size_t idx) : accessor{ accessor }, cur{ cur }, idx{ idx } {}
-				constexpr const_iterator(const const_iterator& other) : accessor{ other.accessor }, cur{ other.cur }, idx{ other.idx } {}
+				constexpr const_iterator(ArrayAccessor& accessor, yyjson_val* val, size_t idx) : accessor{ accessor }, val{ val }, idx{ idx } {}
+				constexpr const_iterator(const const_iterator& other) : accessor{ other.accessor }, val{ other.val }, idx{ other.idx } {}
 
 				constexpr const_iterator& operator++() {
-					cur = unsafe_yyjson_get_next(cur);
+					val = unsafe_yyjson_get_next(val);
 					idx++;
 					return *this;
 				}
 
 				constexpr const_iterator operator++(int) {
 					const_iterator result{ *this };
-					cur = unsafe_yyjson_get_next(cur);
+					val = unsafe_yyjson_get_next(val);
 					idx++;
 					return result;
 				}
@@ -1398,7 +1438,7 @@ namespace rip::binary::accessors {
 				constexpr const auto operator*() const {
 					auto item_type = accessor.refl.get_item_type();
 
-					return ValueAccessor<decltype(item_type)>{ { accessor.reference, idx, cur }, item_type };
+					return ValueAccessor<decltype(item_type)>{ { accessor.reference, idx, val }, item_type };
 				}
 			};
 

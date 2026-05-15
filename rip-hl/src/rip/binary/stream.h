@@ -67,69 +67,95 @@ namespace rip::binary {
 		}
 	};
 
-	//class mem_istream {
-	//	char* ptr;
-	//	size_t pos;
+	class mem_istream {
+		char* ptr;
+		size_t pos;
 
-	//public:
-	//	mem_istream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
+	public:
+		mem_istream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
 
-	//	void read(char* str, size_t count) {
-	//		memcpy(str, addptr(ptr, pos), count);
-	//		pos += count;
-	//	}
+		void read(char* str, size_t count) {
+			memcpy(str, addptr(ptr, pos), count);
+			pos += count;
+		}
 
-	//	void read_string(std::string& str) {
-	//		str = addptr(ptr, pos);
-	//		pos += str.size() + 1;
-	//	}
+		void read_string(std::string& str) {
+			str = addptr(ptr, pos);
+			pos += str.size() + 1;
+		}
 
-	//	void seekg(size_t loc) {
-	//		pos = loc;
-	//	}
+		void seekg(size_t loc) {
+			pos = loc;
+		}
 
-	//	size_t tellg() const {
-	//		return pos;
-	//	}
-	//};
+		size_t tellg() const {
+			return pos;
+		}
+	};
 
-	//class mem_ostream {
-	//	char* ptr;
-	//	size_t pos;
+	class mem_ostream {
+		char* ptr;
+		size_t pos;
 
-	//public:
-	//	mem_ostream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
+	public:
+		mem_ostream(void* ptr) : ptr{ (char*)ptr }, pos{ 0 } {}
 
-	//	void write(char* str, size_t count) {
-	//		memcpy(addptr(ptr, pos), str, count);
-	//		pos += count;
-	//	}
+		void write(const char* str, size_t count) {
+			memcpy(addptr(ptr, pos), str, count);
+			pos += count;
+		}
 
-	//	void write_string(const char* str) {
-	//		strcpy(addptr(ptr, pos), str);
-	//		pos += strlen(str) + 1;
-	//	}
+		void write_string(const char* str) {
+			strcpy(addptr(ptr, pos), str);
+			pos += strlen(str) + 1;
+		}
 
-	//	void seekp(size_t loc) {
-	//		pos = loc;
-	//	}
+		void seekp(size_t loc) {
+			pos = loc;
+		}
 
-	//	size_t tellp() const {
-	//		return pos;
-	//	}
-	//};
+		size_t tellp() const {
+			return pos;
+		}
+	};
 
-	template<typename AddrType_, bool byteswap_offsets = true, bool relative_offsets = false>
+	class null_ostream {
+		size_t pos;
+
+	public:
+		null_ostream() : pos{ 0 } {}
+
+		void write(const char* str, size_t count) {
+			pos += count;
+		}
+
+		void write_string(const char* str) {
+			pos += strlen(str) + 1;
+		}
+
+		void seekp(size_t loc) {
+			pos = loc;
+		}
+
+		size_t tellp() const {
+			return pos;
+		}
+	};
+
+	template<typename RawStreamType_, typename AddrType_, bool byteswap_offsets_ = true, bool relative_offsets_ = false>
 	class binary_istream {
 	protected:
-		fast_istream& stream;
+		RawStreamType_& stream;
 		size_t offset_base;
 
 	public:
+		typedef RawStreamType_ RawStreamType;
 		typedef AddrType_ AddrType;
 		std::endian endianness;
+		static constexpr bool byteswap_offsets = byteswap_offsets_;
+		static constexpr bool relative_offsets = relative_offsets_;
 
-		binary_istream(fast_istream& stream, std::endian endianness = std::endian::native, size_t offset_base = 0) : stream{ stream }, endianness{ endianness }, offset_base{ offset_base } {}
+		binary_istream(RawStreamType_& stream, std::endian endianness = std::endian::native, size_t offset_base = 0) : stream{ stream }, endianness{ endianness }, offset_base{ offset_base } {}
 
 		template<typename T, bool byteswap = true>
 		void read(T& obj) {
@@ -188,18 +214,27 @@ namespace rip::binary {
 		size_t tellg() const {
 			return stream.tellg() - offset_base;
 		}
+
+		RawStreamType_& get_raw_stream() {
+			return stream;
+		}
 	};
 
-	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true>
+	template<typename RawStreamType_, typename AddrType_, std::endian endianness_ = std::endian::native, bool byteswap_offsets_ = true, bool relative_offsets_ = false>
 	class binary_ostream {
 	protected:
-		fast_ostream& stream;
-		size_t offset;
+		RawStreamType_& stream;
+		size_t offset_base;
 
 	public:
+		typedef RawStreamType_ RawStreamType;
+		typedef AddrType_ AddrType;
 		static constexpr bool hasNativeStrings = false;
+		static constexpr std::endian endianness = endianness_;
+		static constexpr bool byteswap_offsets = byteswap_offsets_;
+		static constexpr bool relative_offsets = relative_offsets_;
 
-		binary_ostream(fast_ostream& stream, size_t offset = 0) : stream{ stream }, offset{ offset } {}
+		binary_ostream(RawStreamType_& stream, size_t offset_base = 0) : stream{ stream }, offset_base{ offset_base } {}
 
 		template<typename T, bool byteswap = true>
 		void write(const T& obj) {
@@ -221,7 +256,16 @@ namespace rip::binary {
 
 		template<typename T>
 		void write(const offset_t<T>& obj) {
-			write_as<AddrType, byteswap_offsets>(obj.has_value() ? obj.value() : 0);
+			if (!obj.has_value())
+				write_as<AddrType, byteswap_offsets>(0);
+			else {
+				size_t off = obj.value();
+
+				if constexpr (relative_offsets)
+					off -= this->tellp() - sizeof(AddrType);
+
+				write_as<AddrType, byteswap_offsets>(off);
+			}
 		}
 
 		//void write(const size_val_t& obj) {
@@ -250,11 +294,15 @@ namespace rip::binary {
 		}
 
 		void seekp(size_t loc) {
-			stream.seekp(loc + offset);
+			stream.seekp(loc + offset_base);
 		}
 
 		size_t tellp() const {
-			return stream.tellp() - offset;
+			return stream.tellp() - offset_base;
+		}
+
+		RawStreamType_& get_raw_stream() {
+			return stream;
 		}
 	};
 }

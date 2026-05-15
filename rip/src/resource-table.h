@@ -1,48 +1,50 @@
 #pragma once
-#include <ucsl/resources/asm/v103-rangers.h>
-#include <ucsl/resources/asm/v103-miller.h>
-#include <ucsl/resources/fxcol/v1.h>
-#include <ucsl/resources/svcol/v1.h>
-#include <ucsl/resources/map/v1.h>
-//#include <ucsl/resources/material/contexts.h>
-#include <ucsl/resources/object-world/v2.h>
-#include <ucsl/resources/object-world/v3.h>
-#include <ucsl/resources/rfl/v1.h>
-#include <ucsl/resources/rfl/v2.h>
-#include <ucsl/resources/vertex-animation-texture/v1-rangers.h>
-#include <ucsl/resources/vertex-animation-texture/v1-miller.h>
-#include <ucsl/resources/swif/v5.h>
-#include <ucsl/resources/swif/v6.h>
-#include <ucsl/resources/sobj/v1.h>
-#include <ucsl/resources/nxs/v1.h>
-#include <ucsl/resources/path/v1.h>
-#include <ucsl/resources/path/v200.h>
-#include <ucsl/resources/pointcloud/v2.h>
-#include <ucsl/resources/master-level/v0.h>
-#include <ucsl/resources/density-setting/v11.h>
-#include <ucsl/resources/aism/v0.h>
+//#include <ucsl/resources/asm/v103-rangers.h>
+//#include <ucsl/resources/asm/v103-miller.h>
+//#include <ucsl/resources/fxcol/v1.h>
+//#include <ucsl/resources/svcol/v1.h>
+//#include <ucsl/resources/map/v1.h>
+////#include <ucsl/resources/material/contexts.h>
+//#include <ucsl/resources/object-world/v2.h>
+//#include <ucsl/resources/object-world/v3.h>
+//#include <ucsl/resources/rfl/v1.h>
+//#include <ucsl/resources/rfl/v2.h>
+//#include <ucsl/resources/vertex-animation-texture/v1-rangers.h>
+//#include <ucsl/resources/vertex-animation-texture/v1-miller.h>
+//#include <ucsl/resources/swif/v5.h>
+//#include <ucsl/resources/swif/v6.h>
+//#include <ucsl/resources/sobj/v1.h>
+//#include <ucsl/resources/nxs/v1.h>
+//#include <ucsl/resources/path/v1.h>
+//#include <ucsl/resources/path/v200.h>
+//#include <ucsl/resources/pointcloud/v2.h>
+//#include <ucsl/resources/master-level/v0.h>
+//#include <ucsl/resources/density-setting/v11.h>
+//#include <ucsl/resources/aism/v0.h>
 #include <ucsl-reflection/reflections/resources/asm/v103-rangers.h>
 #include <ucsl-reflection/reflections/resources/asm/v103-miller.h>
-#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
-#include <ucsl-reflection/reflections/resources/svcol/v1.h>
-#include <ucsl-reflection/reflections/resources/map/v1.h>
-//#include <ucsl-reflection/reflections/resources/material/contexts.h>
-#include <ucsl-reflection/reflections/resources/object-world/v2.h>
-#include <ucsl-reflection/reflections/resources/object-world/v3.h>
-#include <ucsl-reflection/reflections/resources/rfl/v1.h>
-#include <ucsl-reflection/reflections/resources/rfl/v2.h>
-#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
-#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
-#include <ucsl-reflection/reflections/resources/swif/v5.h>
-#include <ucsl-reflection/reflections/resources/swif/v6.h>
-#include <ucsl-reflection/reflections/resources/sobj/v1.h>
-#include <ucsl-reflection/reflections/resources/nxs/v1.h>
-#include <ucsl-reflection/reflections/resources/path/v1.h>
-#include <ucsl-reflection/reflections/resources/path/v200.h>
-#include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
-#include <ucsl-reflection/reflections/resources/master-level/v0.h>
-#include <ucsl-reflection/reflections/resources/density-setting/v11.h>
-#include <ucsl-reflection/reflections/resources/aism/v0.h>
+#include <ucsl-reflection/providers/simplerfl.h>
+//#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
+//#include <ucsl-reflection/reflections/resources/svcol/v1.h>
+//#include <ucsl-reflection/reflections/resources/map/v1.h>
+////#include <ucsl-reflection/reflections/resources/material/contexts.h>
+//#include <ucsl-reflection/reflections/resources/object-world/v2.h>
+//#include <ucsl-reflection/reflections/resources/object-world/v3.h>
+//#include <ucsl-reflection/reflections/resources/rfl/v1.h>
+//#include <ucsl-reflection/reflections/resources/rfl/v2.h>
+//#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
+//#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
+//#include <ucsl-reflection/reflections/resources/swif/v5.h>
+//#include <ucsl-reflection/reflections/resources/swif/v6.h>
+//#include <ucsl-reflection/reflections/resources/sobj/v1.h>
+//#include <ucsl-reflection/reflections/resources/nxs/v1.h>
+//#include <ucsl-reflection/reflections/resources/path/v1.h>
+//#include <ucsl-reflection/reflections/resources/path/v200.h>
+//#include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
+//#include <ucsl-reflection/reflections/resources/master-level/v0.h>
+//#include <ucsl-reflection/reflections/resources/density-setting/v11.h>
+//#include <ucsl-reflection/reflections/resources/aism/v0.h>
+#include <rip/models/binary-file.h>
 #include <tuple>
 #include <algorithm>
 #include <array>
@@ -84,18 +86,18 @@ namespace rip::cli::convert {
 		};
 
 		using animation_state_machine = resource<ResourceType::ASM, "1.03-miller",
-			version<"1.03-rangers", ucsl::resources::animation_state_machine::v103_rangers::AsmData>,
-			version<"1.03-miller", ucsl::resources::animation_state_machine::v103_miller::AsmData>
+			version<"1.03-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_rangers::reflections::AsmData>, GI::AllocatorSystem>>,
+			version<"1.03-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_miller::reflections::AsmData>, GI::AllocatorSystem>>
 		>;
 
-		using gedit = resource<ResourceType::GEDIT, "3",
-			version<"2", ucsl::resources::object_world::v2::ObjectWorldData<GI::AllocatorSystem>>,
-			version<"3", ucsl::resources::object_world::v3::ObjectWorldData<GI::AllocatorSystem>>
-		>;
+		//using gedit = resource<ResourceType::GEDIT, "3",
+		//	version<"2", ucsl::resources::object_world::v2::ObjectWorldData<GI::AllocatorSystem>>,
+		//	version<"3", ucsl::resources::object_world::v3::ObjectWorldData<GI::AllocatorSystem>>
+		//>;
 
-		using map = resource<ResourceType::MAP, "1",
-			version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
-		>;
+		//using map = resource<ResourceType::MAP, "1",
+		//	version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
+		//>;
 
 		//using material = resource<ResourceType::MATERIAL, "2",
 		//	version<"1", ucsl::resources::material::contexts::ContextsData>,
@@ -107,45 +109,45 @@ namespace rip::cli::convert {
 		//	version<"2-1.00", ucsl::resources::rfl::v2::Ref2Data<>>
 		//>;
 
-		using vat = resource<ResourceType::VAT, "1-miller",
-			version<"1-rangers", ucsl::resources::vertex_animation_texture::v1_rangers::VertexAnimationTextureData>,
-			version<"1-miller", ucsl::resources::vertex_animation_texture::v1_miller::VertexAnimationTextureData>
-		>;
+		//using vat = resource<ResourceType::VAT, "1-miller",
+		//	version<"1-rangers", ucsl::resources::vertex_animation_texture::v1_rangers::VertexAnimationTextureData>,
+		//	version<"1-miller", ucsl::resources::vertex_animation_texture::v1_miller::VertexAnimationTextureData>
+		//>;
 
-		using fxcol = resource<ResourceType::FXCOL, "1",
-			version<"1", ucsl::resources::fxcol::v1::FxColData>
-		>;
+		//using fxcol = resource<ResourceType::FXCOL, "1",
+		//	version<"1", ucsl::resources::fxcol::v1::FxColData>
+		//>;
 
-		using svcol = resource<ResourceType::SVCOL, "1",
-			version<"1", ucsl::resources::svcol::v1::SvColData>
-		>;
+		//using svcol = resource<ResourceType::SVCOL, "1",
+		//	version<"1", ucsl::resources::svcol::v1::SvColData>
+		//>;
 
-		using swif = resource<ResourceType::SWIF, "6",
-			version<"5", ucsl::resources::swif::v5::SRS_PROJECT>,
-			version<"6", ucsl::resources::swif::v6::SRS_PROJECT>
-		>;
-		using sobj = resource<ResourceType::SOBJ, "1",
-			version<"1", ucsl::resources::sobj::v1::SetObjectData<GI::AllocatorSystem>>
-		>;
-		using nxs = resource<ResourceType::NXS, "1",
-			version<"1", ucsl::resources::nxs::v1::NXSData>
-		>;
-		using path = resource<ResourceType::PATH, "2.00",
-			version<"1", ucsl::resources::path::v1::PathsData>,
-			version<"2.00", ucsl::resources::path::v200::PathsData>
-		>;
-		using pcmodel = resource<ResourceType::PCMODEL, "2",
-			version<"2", ucsl::resources::pointcloud::v2::PointcloudData>
-		>;
-		using mlevel = resource<ResourceType::MASTER_LEVEL, "0",
-			version<"0", ucsl::resources::master_level::v0::MasterLevelData>
-		>;
-		using density_setting = resource<ResourceType::DENSITY_SETTING, "11",
-			version<"11", ucsl::resources::density_setting::v11::DensitySettingData>
-		>;
-		using aism = resource<ResourceType::AISM, "0",
-			version<"0", ucsl::resources::aism::v0::AIStateMachineData>
-		>;
+		//using swif = resource<ResourceType::SWIF, "6",
+		//	version<"5", ucsl::resources::swif::v5::SRS_PROJECT>,
+		//	version<"6", ucsl::resources::swif::v6::SRS_PROJECT>
+		//>;
+		//using sobj = resource<ResourceType::SOBJ, "1",
+		//	version<"1", ucsl::resources::sobj::v1::SetObjectData<GI::AllocatorSystem>>
+		//>;
+		//using nxs = resource<ResourceType::NXS, "1",
+		//	version<"1", ucsl::resources::nxs::v1::NXSData>
+		//>;
+		//using path = resource<ResourceType::PATH, "2.00",
+		//	version<"1", ucsl::resources::path::v1::PathsData>,
+		//	version<"2.00", ucsl::resources::path::v200::PathsData>
+		//>;
+		//using pcmodel = resource<ResourceType::PCMODEL, "2",
+		//	version<"2", ucsl::resources::pointcloud::v2::PointcloudData>
+		//>;
+		//using mlevel = resource<ResourceType::MASTER_LEVEL, "0",
+		//	version<"0", ucsl::resources::master_level::v0::MasterLevelData>
+		//>;
+		//using density_setting = resource<ResourceType::DENSITY_SETTING, "11",
+		//	version<"11", ucsl::resources::density_setting::v11::DensitySettingData>
+		//>;
+		//using aism = resource<ResourceType::AISM, "0",
+		//	version<"0", ucsl::resources::aism::v0::AIStateMachineData>
+		//>;
 
 		using all = std::tuple<
 			animation_state_machine
