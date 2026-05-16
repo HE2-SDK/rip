@@ -17,7 +17,7 @@ namespace rip::serialization {
 		}
 
 		inline static models::Raw<Refl, AllocatorSystem, AddrType, endianness, byteswap_offsets, relative_offsets> load(auto& backend) {
-			typename rip::binary::accessors::binary_istream<decltype(backend)>::template ValueAccessor<Refl> acc{ backend, Refl{} };
+			typename rip::binary::accessors::binary_istream<std::decay_t<decltype(backend)>>::template ValueAccessor<Refl> acc{ backend, Refl{} };
 
 			return { rip::binary::serializeBinaryToAllocatorSystemBuffer<AllocatorSystem, AddrType, endianness, byteswap_offsets, relative_offsets>(acc) };
 		}

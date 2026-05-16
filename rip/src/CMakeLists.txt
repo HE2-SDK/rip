@@ -2,11 +2,11 @@ set(RIP_RESOURCES
     animation_state_machine
     # gedit
     # map
-    # material
+    material
     # rfl
-    # vat
+    vat
     # fxcol
-    # svcol
+    svcol
     # swif
     # sobj
     # nxs

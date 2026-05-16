@@ -2,6 +2,6 @@
 #include <yyjson.h>
 
 namespace rip::serialization {
-	template<typename T>
+	template<typename T, bool arrayVectors = false>
 	struct json;
 }

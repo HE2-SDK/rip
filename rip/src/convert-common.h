@@ -6,7 +6,7 @@
 #include "resource-table.h"
 
 namespace rip::cli::convert {
-	template<typename T>
+	template<typename T, typename AddrType, std::endian endianness>
 	T loadVersion(const Config& config) {
 		switch (config.getInputFormat()) {
 		case Format::BINARY: {
@@ -19,7 +19,7 @@ namespace rip::cli::convert {
 			ifs.read((char*)data.get(), size);
 
 			rip::binary::mem_istream mis{ data.get() };
-			rip::binary::binary_istream<rip::binary::mem_istream, size_t> bis{ mis };
+			rip::binary::binary_istream<rip::binary::mem_istream, AddrType> bis{ mis, endianness };
 
 			return rip::serialization::binary<T>::load(bis);
 		}
@@ -35,19 +35,23 @@ namespace rip::cli::convert {
 
 			return result;
 		}
+		default:
+			return {};
 		}
 	}
 
-	template<typename T>
+	template<typename T, typename AddrType, std::endian endianness>
 	void saveVersion(const Config& config, const T& model) {
 		switch (config.getOutputFormat()) {
 		case Format::BINARY: {
-			std::ofstream ofs{ config.outputFile, std::ios::binary | std::ios::trunc };
+			std::ofstream ofs{ config.getOutputFile(), std::ios::binary | std::ios::trunc};
 
 			rip::binary::fast_ostream fos{ ofs };
-			rip::binary::binary_ostream<rip::binary::fast_ostream, size_t> bos{ fos };
+			rip::binary::binary_ostream<rip::binary::fast_ostream, AddrType, endianness> bos{ fos };
 
 			rip::serialization::binary<T>::save(bos, model);
+
+			break;
 		}
 		case Format::JSON: {
 			auto* doc = yyjson_mut_doc_new(nullptr);
@@ -68,14 +72,18 @@ namespace rip::cli::convert {
 			}
 
 			yyjson_mut_doc_free(doc);
+
+			break;
 		}
+		default:
+			break;
 		}
 	}
 
-	template<typename T>
+	template<typename T, typename AddrType, std::endian endianness>
 	void convertVersion(const Config& config) {
-		T model = loadVersion<T>(config);
-		saveVersion<T>(config, model);
+		T model = loadVersion<T, AddrType, endianness>(config);
+		saveVersion<T, AddrType, endianness>(config, model);
 	}
 
 	template<ResourceType type, strlit defaultVersion, typename... Versions>
@@ -83,7 +91,7 @@ namespace rip::cli::convert {
 		std::string defVer = defaultVersion;
 		std::string version = config.version.value_or(defVer);
 
-		if (!((version == Versions::name.operator std::string() && (convertVersion<typename Versions::resourceDef>(config), true)) || ...))
+		if (!((version == Versions::name.operator std::string() && (convertVersion<typename Versions::resourceDef, typename Versions::addrType, Versions::endianness>(config), true)) || ...))
 			throw std::runtime_error{ std::string{ "Version " } + version + " is invalid for selected resource type." };
 	}
 }

@@ -12,7 +12,7 @@ namespace rip::binary::containers::mirage::v2 {
         };
 
         unsigned int nodeSizeAndFlags;
-        unsigned int version;
+        unsigned int value;
 		ucsl::magic_t<8> magic;
     };
 
@@ -37,7 +37,7 @@ namespace rip::binary::containers::mirage::v2 {
 namespace rip::util {
     template<> inline void byteswap_deep(rip::binary::containers::mirage::v2::NodeHeader& value) noexcept {
         byteswap_deep(value.nodeSizeAndFlags);
-        byteswap_deep(value.version);
+        byteswap_deep(value.value);
     }
 
     template<> inline void byteswap_deep(rip::binary::containers::mirage::v2::FileHeader& value) noexcept {
@@ -127,12 +127,12 @@ namespace rip::binary::containers::mirage::v2 {
         protected:
             MirageResourceImageWriter& writer;
             const ucsl::magic_t<8> magic{};
-            unsigned int version{};
+            unsigned int value{};
             size_t nodeOffset{};
             unsigned int flags{};
 
         public:
-            node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, version{ version }, writer{ writer }, BinaryOutputStreamType{ writer.stream.get_raw_stream(), 0x10 }, nodeOffset{this->tellp()}, flags{flags | (is_last ? NodeHeader::LAST_CHILD : 0)} {
+            node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, value{ value }, writer{ writer }, BinaryOutputStreamType{ writer.stream.get_raw_stream(), sizeof(FileHeader) }, nodeOffset{this->tellp()}, flags{flags | (is_last ? NodeHeader::LAST_CHILD : 0)} {
                 this->write(NodeHeader{});
             }
 
@@ -161,7 +161,7 @@ namespace rip::binary::containers::mirage::v2 {
 
                 NodeHeader nodeHeader{};
                 nodeHeader.nodeSizeAndFlags = static_cast<unsigned int>(nodeEnd - nodeOffset) | flags;
-                nodeHeader.version = version;
+                nodeHeader.value = value;
                 nodeHeader.magic = magic;
 
                 this->seekp(nodeOffset);
@@ -174,24 +174,24 @@ namespace rip::binary::containers::mirage::v2 {
 
         class leaf_node_ostream : public node_ostream {
         public:
-            leaf_node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, version, writer, NodeHeader::LEAF | flags } {}
+            leaf_node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, value, writer, NodeHeader::LEAF | flags } {}
         };
 
         class branch_node_ostream : public node_ostream {
         public:
-            branch_node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, version, writer, flags } {}
+            branch_node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, value, writer, flags } {}
 
-            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int version, bool is_last) {
-                return { magic, version, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
+            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int value, bool is_last) {
+                return { magic, value, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
 
-            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version, bool is_last) {
-                return { magic, version, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
+            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int value, bool is_last) {
+                return { magic, value, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
         };
 
     public:
-        MirageResourceImageWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.get_raw_stream().tellp() + sizeof(FileHeader) } { // I added the offset here. If conversion errors, this is probably the cause.
+        MirageResourceImageWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.get_raw_stream().tellp() } { // I added the offset here. If conversion errors, this is probably the cause.
             stream.write(FileHeader{});
         }
 
@@ -199,8 +199,8 @@ namespace rip::binary::containers::mirage::v2 {
             finish();
         }
 
-        branch_node_ostream add_root_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-            return { magic, version, *this, NodeHeader::LAST_CHILD };
+        branch_node_ostream add_root_node(const ucsl::magic_t<8>& magic, unsigned int value) {
+            return { magic, value, *this, NodeHeader::LAST_CHILD };
         }
 
         void finish() {

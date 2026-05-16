@@ -1,8 +1,7 @@
 #pragma once
-#include <rip/models/binary-file.h>
-//#include <rip/binary/containers/binary-file/v1.h>
+#include <rip/models/binary-file/v2.h>
 #include <rip/binary/containers/binary-file/v2.h>
-#include "raw.h"
+#include <rip/serialization/binary/raw.h>
 
 namespace rip::serialization {
 	template<typename Refl, typename AllocatorSystem>

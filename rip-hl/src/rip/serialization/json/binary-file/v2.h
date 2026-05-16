@@ -1,10 +1,10 @@
 #pragma once
-#include <rip/models/binary-file.h>
-#include "raw.h"
+#include <rip/models/binary-file/v2.h>
+#include <rip/serialization/json/raw.h>
 
 namespace rip::serialization {
-	template<typename Refl, typename AllocatorSystem>
-	struct json<models::BinaryFileV2<Refl, AllocatorSystem>> {
+	template<typename Refl, typename AllocatorSystem, bool arrayVectors>
+	struct json<models::BinaryFileV2<Refl, AllocatorSystem>, arrayVectors> {
 		inline static yyjson_mut_val* save(yyjson_mut_doc* doc, const models::BinaryFileV2<Refl, AllocatorSystem>& model) {
 			return json<models::Raw<Refl, AllocatorSystem>>::save(doc, model.data);
 		}

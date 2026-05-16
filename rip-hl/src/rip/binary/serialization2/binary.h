@@ -125,10 +125,10 @@ namespace rip::binary {
 		inline void process_array(const T& arr) {
 			auto itemRefl = arr.refl.get_item_type();
 
-			backend.write(arr.size() == 0 ? offset_t<void>{} : enqueueBlock<void>(arr.size() * itemRefl.get_size(arr), itemRefl.get_alignment(), [this, arr]() {
+			backend.write(arr.size() == 0 ? offset_t<void>{} : enqueueBlock<void>(arr.size() * itemRefl.template get_size<typename Backend::AddrType>(arr), itemRefl.template get_alignment<typename Backend::AddrType>(), [this, arr]() {
 				for (const auto& item : arr)
 					process_type(item);
-			}));
+				}));
 			backend.write(arr.size());
 			backend.write(arr.capacity());
 			backend.write(0ull);
@@ -138,10 +138,10 @@ namespace rip::binary {
 		inline void process_tarray(const T& arr) {
 			auto itemRefl = arr.refl.get_item_type();
 
-			backend.write(arr.size() == 0 ? offset_t<void>{} : enqueueBlock<void>(arr.size() * itemRefl.get_size(arr), itemRefl.get_alignment(), [this, arr]() {
+			backend.write(arr.size() == 0 ? offset_t<void>{} : enqueueBlock<void>(arr.size() * itemRefl.template get_size<typename Backend::AddrType>(arr), itemRefl.template get_alignment<typename Backend::AddrType>(), [this, arr]() {
 				for (const auto& item : arr)
 					process_type(item);
-			}));
+				}));
 			backend.write(arr.size());
 			backend.write(static_cast<int64_t>(arr.capacity()));
 		}
@@ -156,7 +156,7 @@ namespace rip::binary {
 		inline void process_pointer(const T& obj) {
 			auto targetRefl = obj.refl.get_target_type();
 
-			backend.write(!obj.get().has_value() ? offset_t<void>{} : enqueueBlock<void>(targetRefl.get_size(obj.get().value()), targetRefl.get_alignment(), [this, obj]() {
+			backend.write(!obj.get().has_value() ? offset_t<void>{} : enqueueBlock<void>(targetRefl.template get_size<typename Backend::AddrType>(obj.get().value()), targetRefl.template get_alignment<typename Backend::AddrType>(), [this, obj]() {
 				process_type(obj.get().value());
 			}));
 		}
@@ -168,7 +168,7 @@ namespace rip::binary {
 
 		template<ucsl::reflection::accessors::ValueAccessor T>
 		inline void process_type(const T& obj) {
-			backend.write_padding(obj.refl.get_alignment());
+			backend.write_padding(obj.refl.template get_alignment<typename Backend::AddrType>());
 
 			size_t typeStart = backend.tellp();
 
@@ -185,7 +185,7 @@ namespace rip::binary {
 				else static_assert(false, "invalid type kind");
 			});
 
-			backend.write_padding_bytes(obj.refl.get_size(obj) - (backend.tellp() - typeStart));
+			backend.write_padding_bytes(obj.refl.template get_size<typename Backend::AddrType>(obj) - (backend.tellp() - typeStart));
 		}
 
 		template<ucsl::reflection::accessors::StructureAccessor T>
@@ -195,8 +195,8 @@ namespace rip::binary {
 			if (base.has_value())
 				process_fields(base.value());
 
-			obj.refl.visit_fields(obj, [&](auto field) {
-				process_type(obj[field]);
+			obj.visit_fields([&](const auto& field, const auto& fieldRefl) {
+				process_type(field);
 			});
 		}
 
@@ -210,7 +210,7 @@ namespace rip::binary {
 
 		template<typename T>
 		inline void process(const T& obj) {
-			enqueueBlock<void>(obj.refl.get_size(obj), obj.refl.get_alignment(), [this, obj]() { process_type(obj); });
+			enqueueBlock<void>(obj.refl.template get_size<typename Backend::AddrType>(obj), obj.refl.template get_alignment<typename Backend::AddrType>(), [this, obj]() { process_type(obj); });
 			worker.processQueuedBlocks();
 		}
 	};

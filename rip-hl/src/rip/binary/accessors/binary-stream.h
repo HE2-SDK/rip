@@ -125,7 +125,11 @@ namespace rip::binary::accessors {
 
 			template<simplerfl::strlit FieldName>
 			constexpr auto get_field() const {
-				return (*this)[this->refl.get_field<FieldName>(*this)];
+				return (*this)[this->refl.template get_field<FieldName, typename Stream::AddrType>(*this)];
+			}
+
+			constexpr void visit_fields(auto f) const {
+				return this->refl.template visit_fields<typename Stream::AddrType>(*this, [&](const auto& field) { f((*this)[field], field); });
 			}
 
 			constexpr auto get_base() const {
@@ -188,7 +192,7 @@ namespace rip::binary::accessors {
 
 				//assert(idx < this->refl.get_length());
 
-				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.get_size(ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset }, item_refl }) }, item_refl };
+				return ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset + idx * item_refl.template get_size<typename Stream::AddrType>(ValueAccessor<decltype(item_refl)>{ { this->reference.stream, this->reference.offset }, item_refl }) }, item_refl };
 			}
 
 			inline const_iterator begin() const { return { *this, 0 }; }

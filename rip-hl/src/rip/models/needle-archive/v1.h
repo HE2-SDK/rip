@@ -2,14 +2,14 @@
 #include <ucsl-reflection/reflections/resources/lodinfo/v1.h>
 #include <ucsl-reflection/reflections/resources/model/v5.h>
 #include <variant>
-#include "raw.h"
-#include "mirage.h"
+#include <rip/models/raw.h>
+#include <rip/models/mirage/v2.h>
 
 namespace rip::models {
 	template<typename AllocatorSystem, bool terrain = false>
-	struct NeedleArchive {
+	struct NeedleArchiveV1 {
 		using LODInfoV1Model = Raw<ucsl::resources::lodinfo::v1::reflections::LODInfo, AllocatorSystem>;
-		using ModelV5Model = MirageContainer<std::conditional_t<terrain, ucsl::resources::model::v5::reflections::TerrainModelContexts, ucsl::resources::model::v5::reflections::ModelContexts>, AllocatorSystem>;
+		using ModelV5Model = MirageContainerV2<std::conditional_t<terrain, ucsl::resources::model::v5::reflections::TerrainModelContexts, ucsl::resources::model::v5::reflections::ModelContexts>, AllocatorSystem>;
 
 		template<typename M> struct chunk_type_id;
 		template<> struct chunk_type_id<LODInfoV1Model> { static constexpr const char* value = "NEDLDIV1"; };

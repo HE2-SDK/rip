@@ -256,8 +256,8 @@ namespace rip::binary {
 			if (base.has_value())
 				process_fields(base.value());
 
-			obj.refl.visit_fields(obj, [&](auto field) {
-				yyjson_mut_obj_add_val(doc, currentStruct, field.get_name(), process_type(obj[field]));
+			obj.visit_fields([&](const auto& field, const auto& fieldRefl) {
+				yyjson_mut_obj_add_val(doc, currentStruct, fieldRefl.get_name(), process_type(field));
 			});
 
 			return nullptr;

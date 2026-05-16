@@ -1,39 +1,17 @@
 #pragma once
-//#include <ucsl/resources/asm/v103-rangers.h>
-//#include <ucsl/resources/asm/v103-miller.h>
-//#include <ucsl/resources/fxcol/v1.h>
-//#include <ucsl/resources/svcol/v1.h>
-//#include <ucsl/resources/map/v1.h>
-////#include <ucsl/resources/material/contexts.h>
-//#include <ucsl/resources/object-world/v2.h>
-//#include <ucsl/resources/object-world/v3.h>
-//#include <ucsl/resources/rfl/v1.h>
-//#include <ucsl/resources/rfl/v2.h>
-//#include <ucsl/resources/vertex-animation-texture/v1-rangers.h>
-//#include <ucsl/resources/vertex-animation-texture/v1-miller.h>
-//#include <ucsl/resources/swif/v5.h>
-//#include <ucsl/resources/swif/v6.h>
-//#include <ucsl/resources/sobj/v1.h>
-//#include <ucsl/resources/nxs/v1.h>
-//#include <ucsl/resources/path/v1.h>
-//#include <ucsl/resources/path/v200.h>
-//#include <ucsl/resources/pointcloud/v2.h>
-//#include <ucsl/resources/master-level/v0.h>
-//#include <ucsl/resources/density-setting/v11.h>
-//#include <ucsl/resources/aism/v0.h>
 #include <ucsl-reflection/reflections/resources/asm/v103-rangers.h>
 #include <ucsl-reflection/reflections/resources/asm/v103-miller.h>
 #include <ucsl-reflection/providers/simplerfl.h>
 //#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
-//#include <ucsl-reflection/reflections/resources/svcol/v1.h>
+#include <ucsl-reflection/reflections/resources/svcol/v1.h>
 //#include <ucsl-reflection/reflections/resources/map/v1.h>
-////#include <ucsl-reflection/reflections/resources/material/contexts.h>
+#include <ucsl-reflection/reflections/resources/material/v3.h>
 //#include <ucsl-reflection/reflections/resources/object-world/v2.h>
 //#include <ucsl-reflection/reflections/resources/object-world/v3.h>
 //#include <ucsl-reflection/reflections/resources/rfl/v1.h>
 //#include <ucsl-reflection/reflections/resources/rfl/v2.h>
-//#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
-//#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
+#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
+#include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
 //#include <ucsl-reflection/reflections/resources/swif/v5.h>
 //#include <ucsl-reflection/reflections/resources/swif/v6.h>
 //#include <ucsl-reflection/reflections/resources/sobj/v1.h>
@@ -44,7 +22,9 @@
 //#include <ucsl-reflection/reflections/resources/master-level/v0.h>
 //#include <ucsl-reflection/reflections/resources/density-setting/v11.h>
 //#include <ucsl-reflection/reflections/resources/aism/v0.h>
-#include <rip/models/binary-file.h>
+#include <rip/models/binary-file/v2.h>
+#include <rip/models/mirage/v1.h>
+#include <rip/models/mirage/v2.h>
 #include <tuple>
 #include <algorithm>
 #include <array>
@@ -75,19 +55,21 @@ namespace rip::cli::convert {
 	};
 
 	namespace resources {
-		template<ResourceType type, strlit defaultVersion, typename... Versions> struct resource {
-			static constexpr ResourceType type = type;
-			static constexpr strlit defaultVersion = defaultVersion;
+		template<ResourceType type_, strlit defaultVersion_, typename... Versions> struct resource {
+			static constexpr ResourceType type = type_;
+			static constexpr strlit defaultVersion = defaultVersion_;
 			using versions = std::tuple<Versions...>;
 		};
-		template<strlit name, typename ResourceDef> struct version {
-			static constexpr strlit name = name;
+		template<strlit name_, typename ResourceDef, typename AddrType, std::endian endianness_> struct version {
+			static constexpr strlit name = name_;
 			using resourceDef = ResourceDef;
+			using addrType = AddrType;
+			static constexpr std::endian endianness = endianness_;
 		};
 
 		using animation_state_machine = resource<ResourceType::ASM, "1.03-miller",
-			version<"1.03-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_rangers::reflections::AsmData>, GI::AllocatorSystem>>,
-			version<"1.03-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_miller::reflections::AsmData>, GI::AllocatorSystem>>
+			version<"1.03-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_rangers::reflections::AsmData>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"1.03-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_miller::reflections::AsmData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
 		//using gedit = resource<ResourceType::GEDIT, "3",
@@ -99,28 +81,28 @@ namespace rip::cli::convert {
 		//	version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
 		//>;
 
-		//using material = resource<ResourceType::MATERIAL, "2",
-		//	version<"1", ucsl::resources::material::contexts::ContextsData>,
-		//	version<"2", ucsl::resources::material::contexts::ContextsData>
-		//>;
+		using material = resource<ResourceType::MATERIAL, "3",
+			version<"3-container-v1", rip::models::MirageContainerV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::material::v3::reflections::ContextsData>, GI::AllocatorSystem>, uint32_t, std::endian::big>,
+			version<"3", rip::models::MirageContainerV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::material::v3::reflections::ContextsData>, GI::AllocatorSystem>, uint32_t, std::endian::big>
+		>;
 
 		//using rfl = resource<ResourceType::RFL, "2-1.00",
 		//	version<"1", ucsl::resources::rfl::v1::Ref1Data<>>,
 		//	version<"2-1.00", ucsl::resources::rfl::v2::Ref2Data<>>
 		//>;
 
-		//using vat = resource<ResourceType::VAT, "1-miller",
-		//	version<"1-rangers", ucsl::resources::vertex_animation_texture::v1_rangers::VertexAnimationTextureData>,
-		//	version<"1-miller", ucsl::resources::vertex_animation_texture::v1_miller::VertexAnimationTextureData>
-		//>;
+		using vat = resource<ResourceType::VAT, "1-miller",
+			version<"1-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::vertex_animation_texture::v1_rangers::reflections::VertexAnimationTextureData>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"1-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::vertex_animation_texture::v1_miller::reflections::VertexAnimationTextureData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		//using fxcol = resource<ResourceType::FXCOL, "1",
-		//	version<"1", ucsl::resources::fxcol::v1::FxColData>
+		//	version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::fxcol::v1::reflections::FxColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		//>;
 
-		//using svcol = resource<ResourceType::SVCOL, "1",
-		//	version<"1", ucsl::resources::svcol::v1::SvColData>
-		//>;
+		using svcol = resource < ResourceType::SVCOL, "1",
+			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::svcol::v1::reflections::SvColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		//using swif = resource<ResourceType::SWIF, "6",
 		//	version<"5", ucsl::resources::swif::v5::SRS_PROJECT>,
@@ -150,14 +132,14 @@ namespace rip::cli::convert {
 		//>;
 
 		using all = std::tuple<
-			animation_state_machine
+			animation_state_machine,
 			//gedit,
 			//map,
-			////material,
+			material,
 			//rfl,
-			//vat,
+			vat,
 			//fxcol,
-			//svcol,
+			svcol
 			//swif,
 			//sobj,
 			//nxs,

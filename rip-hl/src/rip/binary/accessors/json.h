@@ -1300,6 +1300,15 @@ namespace rip::binary::accessors {
 				return ValueAccessor<decltype(type)>{ Reference{ this->reference, field_refl.get_name() }, type };
 			}
 
+			template<simplerfl::strlit FieldName>
+			constexpr auto get_field() const {
+				return (*this)[this->refl.template get_field<FieldName, size_t>(*this)];
+			}
+
+			constexpr void visit_fields(auto f) const {
+				this->refl.template visit_fields<size_t>(*this, [&](const auto& field) { f((*this)[field], field); });
+			}
+
 			constexpr auto get_base() const {
 				auto base = this->refl.get_base();
 
@@ -1374,6 +1383,22 @@ namespace rip::binary::accessors {
 				auto target_type = this->refl.get_target_type();
 
 				return yyjson_is_null(this->reference) ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ this->reference, target_type });
+			}
+
+			constexpr operator bool() const {
+				return !yyjson_is_null(this->reference);
+			}
+
+			constexpr auto operator*() const noexcept {
+				auto target_type = this->refl.get_target_type();
+
+				return ValueAccessor<decltype(target_type)>{ this->reference, target_type };
+			}
+
+			constexpr auto operator->() const noexcept {
+				auto target_type = this->refl.get_target_type();
+
+				return ValueAccessor<decltype(target_type)>{ this->reference, target_type };
 			}
 		};
 

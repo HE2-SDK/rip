@@ -10,11 +10,6 @@
 #include <map>
 #undef SYNCHRONIZE
 #undef VOID
-#include <ucsl-reflection/reflections/resources/asm/v103-rangers.h>
-#include <ucsl-reflection/traversals/fold.h>
-#include <ucsl-reflection/providers/simplerfl.h>
-#include <rip/serialization/binary/binary-file.h>
-#include <rip/serialization/json/binary-file.h>
 
 std::map<std::string, Format> formatMap{
 	{ "binary", Format::BINARY },
