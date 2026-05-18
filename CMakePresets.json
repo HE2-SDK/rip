@@ -94,6 +94,13 @@
       "description": "Target Windows (64-bit) with the Visual Studio development environment and the Clang compiler. (Release)",
       "inherits": "x64-debug-clang",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "x64-relwithdebinfo-clang",
+      "displayName": "x64 RelWithDebInfo (Clang)",
+      "description": "Target Windows (64-bit) with the Visual Studio development environment and the Clang compiler. (RelWithDebInfo)",
+      "inherits": "x64-debug-clang",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
     }
   ]
 }

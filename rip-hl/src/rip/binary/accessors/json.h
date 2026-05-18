@@ -868,18 +868,9 @@ namespace rip::binary::accessors {
 	//	};
 	//};
 
-
 	template<bool arrayVectors = false>
 	struct json {
 		template<typename Refl> class ValueAccessor;
-
-		template<typename Refl>
-		class AccessorBase {
-		public:
-			Refl refl;
-
-			inline AccessorBase(const Refl& refl) : refl{ refl } {}
-		};
 
 		struct Reference {
 			enum class Kind {
@@ -928,15 +919,30 @@ namespace rip::binary::accessors {
 
 				return nullptr;
 			}
+
+			bool operator==(const Reference& other) const {
+				return static_cast<yyjson_val*>(*this) == static_cast<yyjson_val*>(other);
+			}
+
+			bool operator!=(const Reference& other) const {
+				return static_cast<yyjson_val*>(*this) != static_cast<yyjson_val*>(other);
+			}
 		};
 
 		template<typename Refl>
-		class Accessor : public AccessorBase<Refl> {
-		protected:
-			Reference reference{};
-		
+		class AddressAccessor;
+
+		template<typename Refl>
+		class Accessor {
 		public:
-			constexpr Accessor(const Reference& reference, const Refl& refl = Refl{}) : AccessorBase<Refl>{ refl }, reference{ reference } {}
+			const Reference reference{};
+			const Refl refl;
+		
+			constexpr Accessor(const Reference& reference, const Refl& refl = Refl{}) : reference{ reference }, refl{ refl } {}
+
+			constexpr AddressAccessor<Refl> operator&() const {
+				return { reference, refl };
+			}
 		};
 
 		template<typename Refl, typename Repr = typename Refl::repr>
@@ -1375,30 +1381,108 @@ namespace rip::binary::accessors {
 		};
 
 		template<typename Refl>
-		class PointerAccessor : public Accessor<Refl> {
+		class AddressAccessor : public Accessor<Refl> {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			constexpr auto get() const {
-				auto target_type = this->refl.get_target_type();
-
-				return yyjson_is_null(this->reference) ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ this->reference, target_type });
+			constexpr operator size_t() const {
+				return (size_t)static_cast<yyjson_val*>(this->reference);
 			}
 
 			constexpr operator bool() const {
 				return !yyjson_is_null(this->reference);
 			}
 
-			constexpr auto operator*() const noexcept {
-				auto target_type = this->refl.get_target_type();
-
-				return ValueAccessor<decltype(target_type)>{ this->reference, target_type };
+			constexpr ValueAccessor<Refl> operator*() const noexcept {
+				return { this->reference, this->refl };
 			}
 
-			constexpr auto operator->() const noexcept {
+			//constexpr auto operator->() const noexcept {
+			//	return ValueAccessor<Refl>{ this->reference, this->refl };
+			//}
+
+			constexpr bool operator==(std::nullptr_t ptr) const {
+				return yyjson_is_null(this->reference);
+			}
+
+			constexpr bool operator==(const AddressAccessor<Refl>& other) const {
+				return (yyjson_is_null(this->reference) && yyjson_is_null(other->reference)) || this->reference == other->reference;
+			}
+
+			constexpr bool operator!=(std::nullptr_t ptr) const {
+				return !yyjson_is_null(this->reference);
+			}
+
+			constexpr bool operator!=(const AddressAccessor<Refl>& other) const {
+				return (yyjson_is_null(this->reference) && yyjson_is_null(other->reference)) || this->reference != other->reference;
+			}
+		};
+
+		template<typename Refl>
+		class PointerAccessor : public Accessor<Refl> {
+		public:
+			using Accessor<Refl>::Accessor;
+
+			//constexpr auto get() const {
+			//	auto target_type = this->refl.get_target_type();
+
+			//	return yyjson_is_null(this->reference) ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ this->reference, target_type });
+			//}
+
+			constexpr auto get() const {
 				auto target_type = this->refl.get_target_type();
 
-				return ValueAccessor<decltype(target_type)>{ this->reference, target_type };
+				if (yyjson_is_null(this->reference))
+					return AddressAccessor<decltype(target_type)>{ this->reference, target_type };
+
+				yyjson_val* ref = yyjson_obj_get(this->reference, "$ref");
+				const char* jsonPtr = ref == nullptr ? nullptr : yyjson_get_str(ref);
+
+				if (jsonPtr == nullptr)
+					return AddressAccessor<decltype(target_type)>{ this->reference, target_type };
+
+				auto* ptrDst = yyjson_doc_ptr_get(this->reference.doc, jsonPtr);
+
+				if (ptrDst == nullptr)
+					throw std::runtime_error{ std::string{ "Invalid JSON pointer: " } + jsonPtr };
+
+				return AddressAccessor<decltype(target_type)>{ { this->reference.doc, ptrDst }, target_type };
+			}
+
+			constexpr operator auto() const {
+				return get();
+			}
+
+			constexpr operator size_t() const {
+				return get();
+			}
+
+			constexpr operator bool() const {
+				return get();
+			}
+
+			constexpr auto operator*() const noexcept {
+				return *get();
+			}
+
+			//constexpr auto operator->() const noexcept {
+			//	return *get();
+			//}
+
+			constexpr bool operator==(std::nullptr_t ptr) const {
+				return get() == ptr;
+			}
+
+			constexpr bool operator==(const PointerAccessor<Refl>& other) const {
+				return get() == other.get();
+			}
+
+			constexpr bool operator!=(std::nullptr_t ptr) const {
+				return get() != ptr;
+			}
+
+			constexpr bool operator!=(const PointerAccessor<Refl>& other) const {
+				return get() != other.get();
 			}
 		};
 

@@ -16,20 +16,46 @@ namespace rip::binary {
 	class BinarySerializer {
 		Backend& backend;
 
-		//// We keep the buffer size as well, since sometimes an earlier reference serialized a smaller slice
-		//// of the buffer, and in that case we can't simply point back to this already stored version.
-		//// We could do a lot of work to roll back and instead store a larger buffer, but for now I'm just
-		//// duplicating the data in that case, since it mostly happens with dangling pointers of empty MoveArrays.
-		//struct DisambiguatedPointer {
-		//	size_t offset;
-		//	size_t bufferSize;
-		//};
+		struct DisambiguatedPointer {
+			std::optional<offset_t<void>> resolvedTarget{};
+			std::vector<size_t> weakPtrs{};
+		};
 
-		//std::map<const void*, DisambiguatedPointer> knownPtrs{};
+		std::unordered_map<size_t, DisambiguatedPointer> knownPtrs{};
 		BlobWorker<> worker{ backend.tellp() };
 
-		template<typename T, typename F>
-		offset_t<T> enqueueBlock(size_t bufferSize, size_t alignment, F processFunc) {
+		template<typename Refl>
+		constexpr size_t countPtrDepth(const Refl& refl) {
+			return refl.visit([&](auto r) {
+				if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) { return 1 + countPtrDepth(r.get_target_type()); }
+				else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) { return 1 + countPtrDepth(r.get_item_type()); }
+				else return 0;
+			});
+		}
+
+		template<typename T>
+		DisambiguatedPointer& lookupPtr(const T& obj) {
+			return knownPtrs[static_cast<size_t>(&obj) ^ countPtrDepth(obj.refl)];
+		}
+
+		void resolvePtr(DisambiguatedPointer& knownPtr, offset_t<void> targetOffset) {
+			auto pos = backend.tellp();
+
+			for (auto weakPtrLoc : knownPtr.weakPtrs) {
+				backend.seekp(weakPtrLoc);
+				backend.write(targetOffset);
+			}
+
+			knownPtr.weakPtrs.clear();
+			knownPtr.resolvedTarget = targetOffset;
+
+			backend.seekp(pos);
+		}
+
+		template<typename T>
+		offset_t<T> enqueueBlock(size_t bufferSize, size_t alignment, auto processFunc) {
+			assert(bufferSize > 0);
+
 			//if (ptr == nullptr)
 			//	return offset_t<T>{};
 
@@ -154,11 +180,47 @@ namespace rip::binary {
 
 		template<ucsl::reflection::accessors::PointerAccessor T>
 		inline void process_pointer(const T& obj) {
-			auto targetRefl = obj.refl.get_target_type();
+			if (obj == nullptr) {
+				backend.write(offset_t<void>{});
+				return;
+			}
 
-			backend.write(!obj.get().has_value() ? offset_t<void>{} : enqueueBlock<void>(targetRefl.template get_size<typename Backend::AddrType>(obj.get().value()), targetRefl.template get_alignment<typename Backend::AddrType>(), [this, obj]() {
-				process_type(obj.get().value());
-			}));
+			auto target = *obj;
+			auto& knownPtr = lookupPtr(target);
+
+			if (knownPtr.resolvedTarget.has_value()) {
+				backend.write(offset_t<void>{ knownPtr.resolvedTarget.value() });
+				return;
+			}
+
+			if (obj.refl.is_weak()) {
+				knownPtr.weakPtrs.push_back(backend.tellp());
+
+				backend.write(offset_t<void>{});
+			}
+			else {
+				auto targetRefl = obj.refl.get_target_type();
+				auto targetSize = targetRefl.template get_size<typename Backend::AddrType>(target);
+				auto targetAlignment = targetRefl.template get_alignment<typename Backend::AddrType>();
+				auto targetOffset = enqueueBlock<void>(targetSize, targetAlignment, [this, target]() {
+					process_type(target);
+				});
+
+				resolvePtr(knownPtr, targetOffset);
+
+				target.visit([&](auto v) {
+					if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
+						size_t cur = targetOffset.value();
+
+						for (const auto& item : v) {
+							resolvePtr(lookupPtr(item), offset_t<void>{ cur });
+							cur += item.refl.template get_size<typename Backend::AddrType>(item);
+						}
+					}
+				});
+
+				backend.write(targetOffset);
+			}
 		}
 
 		template<typename T>

@@ -78,6 +78,8 @@ namespace rip::binary::containers::binary_file {
 		void writeOffsetTable() {
 			size_t last_offset = 0;
 
+			std::sort(offsets.begin(), offsets.end());
+
 			for (size_t offset : offsets) {
 				size_t diff = offset - last_offset;
 
@@ -104,9 +106,8 @@ namespace rip::binary::containers::binary_file {
 		}
 
 		template<typename T> void write(const offset_t<T>& obj) {
-			// TODO: remove after impl of read
-			//if (obj.has_value())
-			offsets.emplace_back(this->tellp());
+			if (obj.has_value())
+				offsets.emplace_back(this->tellp());
 
 			binary_ostream<RawStreamType, AddressType, endianness>::write(obj);
 		}

@@ -17,6 +17,48 @@ namespace rip::binary {
 		yyjson_mut_doc* doc;
 		yyjson_mut_val* currentStruct{};
 
+		struct DisambiguatedPointer {
+			std::optional<std::string> resolvedTarget{};
+			std::vector<yyjson_mut_val*> weakPtrs{};
+		};
+
+		std::unordered_map<size_t, DisambiguatedPointer> knownPtrs{};
+		std::vector<std::variant<const char*, size_t>> currentJsonPtr{};
+
+		template<typename Refl>
+		constexpr size_t countPtrDepth(const Refl& refl) {
+			return refl.visit([&](auto r) {
+				if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) { return 1 + countPtrDepth(r.get_target_type()); }
+				else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) { return 1 + countPtrDepth(r.get_item_type()); }
+				else return 0;
+			});
+		}
+
+		template<typename T>
+		DisambiguatedPointer& lookupPtr(const T& obj) {
+			return knownPtrs[static_cast<size_t>(&obj) ^ countPtrDepth(obj.refl)];
+		}
+
+		void resolvePtr(DisambiguatedPointer& knownPtr) {
+			char buf[1024];
+
+			size_t off{};
+
+			for (const auto& el : currentJsonPtr)
+				std::visit([&](const auto& val) {
+					if constexpr (std::is_same_v<std::decay_t<decltype(val)>, const char*>)
+						off += snprintf(buf + off, sizeof(buf) - off, "/%s", val);
+					else
+						off += snprintf(buf + off, sizeof(buf) - off, "/%zd", val);
+				}, el);
+
+			for (auto* weakPtr : knownPtr.weakPtrs)
+				yyjson_mut_obj_add_strcpy(doc, weakPtr, "$ref", buf);
+
+			knownPtr.weakPtrs.clear();
+			knownPtr.resolvedTarget = buf;
+		}
+
 		template<std::integral T, std::enable_if_t<std::is_signed_v<T>, bool> = true>
 		inline yyjson_mut_val* process_primitive_data(const T& obj) {
 			return yyjson_mut_sint(doc, obj);
@@ -211,35 +253,74 @@ namespace rip::binary {
 		template<typename T>
 		inline yyjson_mut_val* process_array(T arr) {
 			yyjson_mut_val* jarr = yyjson_mut_arr(doc);
-			for (auto& obj : arr)
+			size_t idx{};
+			for (auto& obj : arr) {
+				currentJsonPtr.push_back(idx++);
 				yyjson_mut_arr_add_val(jarr, process_type(obj));
+				currentJsonPtr.pop_back();
+			}
 			return jarr;
 		}
 
 		template<typename T>
 		inline yyjson_mut_val* process_tarray(T arr) {
 			yyjson_mut_val* jarr = yyjson_mut_arr(doc);
-			for (auto& obj : arr)
+			size_t idx{};
+			for (auto& obj : arr) {
+				currentJsonPtr.push_back(idx++);
 				yyjson_mut_arr_add_val(jarr, process_type(obj));
+				currentJsonPtr.pop_back();
+			}
 			return jarr;
 		}
 
 		template<ucsl::reflection::accessors::CArrayAccessor T>
 		inline yyjson_mut_val* process_carray(const T& arr) {
 			yyjson_mut_val* jarr = yyjson_mut_arr(doc);
-			for (const auto& obj : arr)
+			size_t idx{};
+			for (const auto& obj : arr) {
+				currentJsonPtr.push_back(idx++);
 				yyjson_mut_arr_add_val(jarr, process_type(obj));
+				currentJsonPtr.pop_back();
+			}
 			return jarr;
 		}
 
 		template<ucsl::reflection::accessors::PointerAccessor T>
 		inline yyjson_mut_val* process_pointer(const T& obj) {
-			if (!obj.get().has_value())
+			if (obj == nullptr)
 				return yyjson_mut_null(doc);
 
-			auto v = obj.get().value();
+			auto target = *obj;
+			auto& knownPtr = lookupPtr(target);
 
-			return process_type(v);
+			if (knownPtr.resolvedTarget.has_value()) {
+				auto* obj = yyjson_mut_obj(doc);
+				yyjson_mut_obj_add_strcpy(doc, obj, "$ref", knownPtr.resolvedTarget.value().c_str());
+				return obj;
+			}
+
+			if (obj.refl.is_weak()) {
+				auto* obj = yyjson_mut_obj(doc);
+				knownPtr.weakPtrs.push_back(obj);
+				return obj;
+			}
+
+			resolvePtr(knownPtr);
+
+			target.visit([&](auto v) {
+				if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
+					size_t idx{};
+
+					for (const auto& item : v) {
+						currentJsonPtr.push_back(idx++);
+						resolvePtr(lookupPtr(item));
+						currentJsonPtr.pop_back();
+					}
+				}
+			});
+
+			return process_type(target);
 		}
 
 		template<typename T>
@@ -257,7 +338,9 @@ namespace rip::binary {
 				process_fields(base.value());
 
 			obj.visit_fields([&](const auto& field, const auto& fieldRefl) {
+				currentJsonPtr.push_back(fieldRefl.get_name());
 				yyjson_mut_obj_add_val(doc, currentStruct, fieldRefl.get_name(), process_type(field));
+				currentJsonPtr.pop_back();
 			});
 
 			return nullptr;

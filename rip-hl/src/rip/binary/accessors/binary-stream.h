@@ -24,7 +24,18 @@ namespace rip::binary::accessors {
 				stream.seekg(prevOff);
 				return res;
 			}
+
+			bool operator==(const Reference& other) const {
+				return &stream == &other.stream && offset == other.offset;
+			}
+
+			bool operator!=(const Reference& other) const {
+				return &stream != &other.stream || offset != other.offset;
+			}
 		};
+
+		template<typename Refl>
+		class AddressAccessor;
 
 		template<typename Refl>
 		class AccessorBase {
@@ -33,6 +44,10 @@ namespace rip::binary::accessors {
 			const Refl refl;
 
 			constexpr AccessorBase(const Reference& reference, const Refl& refl) : reference{ reference }, refl{ refl } {}
+
+			constexpr AddressAccessor<Refl> operator&() const {
+				return { reference, refl };
+			}
 		};
 
 		template<typename Refl>
@@ -202,19 +217,107 @@ namespace rip::binary::accessors {
 		};
 
 		template<typename Refl>
+		class AddressAccessor : public AccessorBase<Refl> {
+		public:
+			using AccessorBase<Refl>::AccessorBase;
+
+			constexpr operator bool() const {
+				return this->reference.offset != 0;
+			}
+
+			constexpr operator size_t() const {
+				return this->reference.offset;
+			}
+
+			constexpr ValueAccessor<Refl> operator*() const noexcept {
+				return { this->reference, this->refl };
+			}
+
+			//constexpr auto operator->() const noexcept {
+			//	return ValueAccessor<decltype(target_type)>{ this->reference, this->refl };
+			//}
+
+			constexpr bool operator==(std::nullptr_t ptr) const {
+				return this->reference.offset == 0;
+			}
+
+			constexpr bool operator==(const AddressAccessor<Refl>& other) const {
+				return this->reference == other->reference;
+			}
+
+			constexpr bool operator!=(std::nullptr_t ptr) const {
+				return !this->reference.offset != 0;
+			}
+
+			constexpr bool operator!=(const AddressAccessor<Refl>& other) const {
+				return this->reference != other->reference;
+			}
+		};
+
+		template<typename Refl>
 		class PointerAccessor : public AccessorBase<Refl> {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			inline auto get() const {
-				auto target_type = this->refl.get_target_type();
+			//inline auto get() const {
+			//	auto target_type = this->refl.get_target_type();
 
+			//	return this->reference.withStream([&](auto& stream) {
+			//		rip::binary::offset_t<void> offset{};
+			//		stream.read(offset);
+
+			//		return !offset.has_value() ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ { this->reference.stream, offset.value() }, target_type });
+			//	});
+			//}
+
+			constexpr auto get() const {
 				return this->reference.withStream([&](auto& stream) {
+					auto target_type = this->refl.get_target_type();
+
 					rip::binary::offset_t<void> offset{};
 					stream.read(offset);
 
-					return !offset.has_value() ? std::nullopt : std::make_optional<const ValueAccessor<decltype(target_type)>>({ { this->reference.stream, offset.value() }, target_type });
+					if (!offset.has_value())
+						return AddressAccessor<decltype(target_type)> { { this->reference.stream, 0ull }, target_type };
+
+					return AddressAccessor<decltype(target_type)>{ { this->reference.stream, offset.value() }, target_type };
 				});
+			}
+
+			constexpr operator auto() const {
+				return get();
+			}
+
+			constexpr operator size_t() const {
+				return get();
+			}
+
+			constexpr operator bool() const {
+				return get();
+			}
+
+			constexpr auto operator*() const noexcept {
+				return *get();
+			}
+
+			//constexpr auto operator->() const noexcept {
+			//	return *get();
+			//}
+
+			constexpr bool operator==(std::nullptr_t ptr) const {
+				return get() == ptr;
+			}
+
+			constexpr bool operator==(const PointerAccessor<Refl>& other) const {
+				return get() == other.get();
+			}
+
+			constexpr bool operator!=(std::nullptr_t ptr) const {
+				return get() != ptr;
+			}
+
+			constexpr bool operator!=(const PointerAccessor<Refl>& other) const {
+				return get() != other.get();
 			}
 		};
 

@@ -30,6 +30,9 @@ namespace rip::binary {
 		}
 
 		void seekg(size_t loc) {
+			if (shadow_pos == loc)
+				return;
+
 			stream.seekg(loc);
 			shadow_pos = loc;
 		}
@@ -58,6 +61,9 @@ namespace rip::binary {
 		}
 
 		void seekp(size_t loc) {
+			if (shadow_pos == loc)
+				return;
+
 			stream.seekp(loc);
 			shadow_pos = loc;
 		}
