@@ -215,10 +215,6 @@ namespace rip::binary {
 			return yyjson_mut_strcpy(doc, guid);
 		}
 
-		inline yyjson_mut_val* process_primitive_data(const ucsl::strings::VariableString& obj) {
-			return yyjson_mut_strcpy(doc, obj.c_str());
-		}
-
 		inline yyjson_mut_val* process_primitive_data(const char* const& obj) {
 			return yyjson_mut_strcpy(doc, obj);
 		}
@@ -229,11 +225,11 @@ namespace rip::binary {
 
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline yyjson_mut_val* process_primitive(const T& obj) {
-			return obj.visit([&](auto data) {
-				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*>)
+			return obj.visit([&](const auto& data) {
+				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*> || std::is_same_v<typename decltype(data.refl)::repr, ucsl::strings::VariableString>)
 					return process_primitive_data(std::string{ data }.c_str());
 				else
-					return process_primitive_data(typename decltype(data.refl)::repr{ data });
+					return process_primitive_data(static_cast<typename decltype(data.refl)::repr>(data));
 			});
 		}
 
@@ -245,10 +241,34 @@ namespace rip::binary {
 			return yyjson_mut_sint(doc, obj);
 		}
 
-		//template<typename T, typename O>
-		//yyjson_mut_val* visit_flags(T& obj, const FlagsInfo<O>& info) {
-		//	return visit_primitive(obj, PrimitiveInfo<T>{});
-		//}
+		inline yyjson_mut_val* process_bitfield(const auto& obj) {
+			return obj.visit([&](const auto& underlying) {
+				typename decltype(underlying.refl)::repr bitfield{ underlying };
+
+				yyjson_mut_val* result = yyjson_mut_obj(doc);
+				
+				obj.refl.visit_components([&](const auto& component) {
+					size_t mask{ (1 << component.get_width()) - 1 };
+					size_t value{ (bitfield >> component.get_offset()) & mask };
+
+					yyjson_mut_obj_add_val(doc, result, component.get_name(), component.get_type().visit([&](const auto& r) -> yyjson_mut_val* {
+						if constexpr (std::decay_t<decltype(r)>::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE)
+							return r.visit([&](const auto& pd) -> yyjson_mut_val* {
+								return process_primitive_data(*reinterpret_cast<typename std::decay_t<decltype(pd)>::repr*>(&value));
+							});
+						else if constexpr (std::decay_t<decltype(r)>::kind == ucsl::reflection::providers::TypeKind::ENUM) {
+							for (auto& option : r.get_options())
+								if (option.GetIndex() == value)
+									return yyjson_mut_strcpy(doc, option.GetEnglishName());
+							return yyjson_mut_sint(doc, value);
+						}
+						else static_assert(false, "invalid type kind");
+					}));
+				});
+
+				return result;
+			});
+		}
 
 		template<typename T>
 		inline yyjson_mut_val* process_array(T arr) {
@@ -361,7 +381,7 @@ namespace rip::binary {
 			return obj.visit([&](auto v) {
 				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) return process_primitive(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) return process_enum(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::FLAGS) return process_flags(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::BITFIELD) return process_bitfield(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) return process_array(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) return process_tarray(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) return process_carray(v);

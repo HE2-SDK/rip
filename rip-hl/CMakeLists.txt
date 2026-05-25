@@ -1,5 +1,6 @@
 add_library(rip-hl INTERFACE)
 target_compile_features(rip-hl INTERFACE cxx_std_20)
+target_compile_definitions(rip-hl INTERFACE _CRT_SECURE_NO_WARNINGS=1)
 target_link_libraries(rip-hl INTERFACE yyjson universal-cslib universal-cslib-reflection reflectcpp)
 add_subdirectory(src)
 

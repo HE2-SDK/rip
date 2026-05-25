@@ -274,13 +274,13 @@ namespace rip::binary {
 			}
 		}
 
-		//void write(const size_val_t& obj) {
-		//	write_as<AddrType>(obj);
-		//}
+		void write(const size_val_t& obj) {
+			write_as<AddrType>(obj);
+		}
 
-		//void write(const ptrdiff_val_t& obj) {
-		//	write_as<AddrType>(obj);
-		//}
+		void write(const ptrdiff_val_t& obj) {
+			write_as<AddrType>(obj);
+		}
 
 		template<typename U, bool byteswap = true, typename T = U>
 		void write_as(const T& obj) {

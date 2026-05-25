@@ -86,15 +86,6 @@ namespace rip::binary {
 			backend.write(erased ? T{} : obj);
 		}
 
-		inline void write_string(const char* obj) {
-			if constexpr (Backend::hasNativeStrings)
-				backend.write(obj);
-			else
-				backend.write(obj == nullptr ? offset_t<char>{} : enqueueBlock<char>(strlen(obj) + 1, 1, [this, obj]() {
-					backend.write_string(obj);
-				}));
-		}
-
 		inline void write_string(const std::string& obj) {
 			if constexpr (Backend::hasNativeStrings)
 				backend.write(obj.c_str());
@@ -102,11 +93,6 @@ namespace rip::binary {
 				backend.write(enqueueBlock<char>(obj.size() + 1, 1, [this, obj]() {
 					backend.write_string(obj.c_str());
 				}));
-		}
-
-		inline void process_primitive_data(ucsl::strings::VariableString& obj, bool erased) {
-			write_string(reinterpret_cast<const char*&>(obj));
-			backend.write(0ull);
 		}
 
 		inline void process_primitive_data(void*& obj, bool erased) {
@@ -126,26 +112,31 @@ namespace rip::binary {
 
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline void process_primitive(const T& obj) {
-			obj.visit([&](auto data) {
-				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*>) {
+			obj.visit([&](const auto& data) {
+				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*>)
 					write_string(std::string{ data });
+				else if constexpr (std::is_same_v<typename decltype(data.refl)::repr, ucsl::strings::VariableString>) {
+					write_string(std::string{ data });
+					backend.write(size_val_t{ 0ull });
 				}
 				else
-					process_primitive_data(typename decltype(data.refl)::repr{ data }, data.refl.is_erased);
+					process_primitive_data(static_cast<typename decltype(data.refl)::repr>(data), data.refl.is_erased);
 			});
 		}
 
 		template<typename T>
 		inline void process_enum(const T& obj) {
-			obj.refl.visit([&](auto refl) {
-				process_primitive_data(static_cast<decltype(refl)::repr>(static_cast<long long>(obj)), refl.is_erased);
+			obj.refl.visit([&](const auto& refl) {
+				process_primitive_data(static_cast<std::decay_t<decltype(refl)>::repr>(static_cast<long long>(obj)), refl.is_erased);
 			});
 		}
 
-		//template<typename T>
-		//inline void process_flags(const T& obj) {
-		//	process_primitive(obj);
-		//}
+		template<typename T>
+		inline void process_bitfield(const T& obj) {
+			obj.visit([&](const auto& data) {
+				process_primitive_data(static_cast<typename decltype(data.refl)::repr>(data), data.refl.is_erased);
+			});
+		}
 
 		template<typename T>
 		inline void process_array(const T& arr) {
@@ -155,9 +146,9 @@ namespace rip::binary {
 				for (const auto& item : arr)
 					process_type(item);
 				}));
-			backend.write(arr.size());
-			backend.write(arr.capacity());
-			backend.write(0ull);
+			backend.write(size_val_t{ arr.size() });
+			backend.write(size_val_t{ arr.capacity() });
+			backend.write(size_val_t{ 0ull });
 		}
 
 		template<typename T>
@@ -168,8 +159,8 @@ namespace rip::binary {
 				for (const auto& item : arr)
 					process_type(item);
 				}));
-			backend.write(arr.size());
-			backend.write(static_cast<int64_t>(arr.capacity()));
+			backend.write(size_val_t{ arr.size() });
+			backend.write(size_val_t{ arr.capacity() });
 		}
 
 		template<ucsl::reflection::accessors::CArrayAccessor T>
@@ -189,38 +180,43 @@ namespace rip::binary {
 			auto& knownPtr = lookupPtr(target);
 
 			if (knownPtr.resolvedTarget.has_value()) {
-				backend.write(offset_t<void>{ knownPtr.resolvedTarget.value() });
+				backend.write(knownPtr.resolvedTarget.value());
 				return;
 			}
 
 			if (obj.refl.is_weak()) {
 				knownPtr.weakPtrs.push_back(backend.tellp());
-
 				backend.write(offset_t<void>{});
+				return;
 			}
-			else {
-				auto targetRefl = obj.refl.get_target_type();
-				auto targetSize = targetRefl.template get_size<typename Backend::AddrType>(target);
-				auto targetAlignment = targetRefl.template get_alignment<typename Backend::AddrType>();
-				auto targetOffset = enqueueBlock<void>(targetSize, targetAlignment, [this, target]() {
-					process_type(target);
-				});
 
-				resolvePtr(knownPtr, targetOffset);
+			auto targetRefl = obj.refl.get_target_type();
+			auto targetSize = targetRefl.template get_size<typename Backend::AddrType>(target);
+			auto targetAlignment = targetRefl.template get_alignment<typename Backend::AddrType>();
 
-				target.visit([&](auto v) {
-					if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
-						size_t cur = targetOffset.value();
+			if (targetSize == 0) {
+				backend.write(offset_t<void>{});
+				return;
+			}
 
-						for (const auto& item : v) {
-							resolvePtr(lookupPtr(item), offset_t<void>{ cur });
-							cur += item.refl.template get_size<typename Backend::AddrType>(item);
-						}
+			auto targetOffset = enqueueBlock<void>(targetSize, targetAlignment, [this, target]() {
+				process_type(target);
+			});
+
+			resolvePtr(knownPtr, targetOffset);
+
+			target.visit([&](auto v) {
+				if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
+					size_t cur = targetOffset.value();
+
+					for (const auto& item : v) {
+						resolvePtr(lookupPtr(item), offset_t<void>{ cur });
+						cur += item.refl.template get_size<typename Backend::AddrType>(item);
 					}
-				});
+				}
+			});
 
-				backend.write(targetOffset);
-			}
+			backend.write(targetOffset);
 		}
 
 		template<typename T>
@@ -237,7 +233,7 @@ namespace rip::binary {
 			obj.visit([&](auto v) {
 				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) process_primitive(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ENUM) process_enum(v);
-				//else if constexpr (decltype(v.refl)::kind == providers::TypeKind::FLAGS) process_flags(v);
+				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::BITFIELD) process_bitfield(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::ARRAY) process_array(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::TARRAY) process_tarray(v);
 				else if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) process_carray(v);

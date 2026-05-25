@@ -159,8 +159,8 @@ namespace rip::schemas::hedgeset {
 				return { .type = MemberType::ENUM, .subtype = get_primitive_type(e.type), .enumm = load_enum(member.type, enums) };
 			}
 
-			if (member.type == "flags")
-				return { .type = MemberType::FLAGS, .subtype = get_primitive_type(member.subtype.value()), .flag_values = get_flag_values(member) };
+			if (member.flags.has_value())
+				return { .type = MemberType::FLAGS, .subtype = get_primitive_type(member.type), .flag_values = get_flag_values(member) };
 
 			if (member.type != "array")
 				return { .type = get_primitive_type(member.type, member.alignment) };

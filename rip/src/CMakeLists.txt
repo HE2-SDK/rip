@@ -1,20 +1,20 @@
 set(RIP_RESOURCES
     animation_state_machine
-    # gedit
+    gedit
     # map
     material
-    # rfl
+    rfl
     vat
-    # fxcol
+    fxcol
     svcol
     # swif
     # sobj
     # nxs
     # path
-    # pcmodel
-    # mlevel
-    # density_setting
-    # aism
+    pcmodel
+    mlevel
+    density_setting
+    aism
 )
 
 foreach(RIP_RESOURCE IN LISTS RIP_RESOURCES)

@@ -2,14 +2,14 @@
 #include <ucsl-reflection/reflections/resources/asm/v103-rangers.h>
 #include <ucsl-reflection/reflections/resources/asm/v103-miller.h>
 #include <ucsl-reflection/providers/simplerfl.h>
-//#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
+#include <ucsl-reflection/reflections/resources/fxcol/v1.h>
 #include <ucsl-reflection/reflections/resources/svcol/v1.h>
 //#include <ucsl-reflection/reflections/resources/map/v1.h>
 #include <ucsl-reflection/reflections/resources/material/v3.h>
-//#include <ucsl-reflection/reflections/resources/object-world/v2.h>
-//#include <ucsl-reflection/reflections/resources/object-world/v3.h>
-//#include <ucsl-reflection/reflections/resources/rfl/v1.h>
-//#include <ucsl-reflection/reflections/resources/rfl/v2.h>
+#include <ucsl-reflection/reflections/resources/object-world/v2.h>
+#include <ucsl-reflection/reflections/resources/object-world/v3.h>
+#include <ucsl-reflection/reflections/resources/rfl/v1.h>
+#include <ucsl-reflection/reflections/resources/rfl/v2.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
 //#include <ucsl-reflection/reflections/resources/swif/v5.h>
@@ -18,10 +18,10 @@
 //#include <ucsl-reflection/reflections/resources/nxs/v1.h>
 //#include <ucsl-reflection/reflections/resources/path/v1.h>
 //#include <ucsl-reflection/reflections/resources/path/v200.h>
-//#include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
-//#include <ucsl-reflection/reflections/resources/master-level/v0.h>
-//#include <ucsl-reflection/reflections/resources/density-setting/v11.h>
-//#include <ucsl-reflection/reflections/resources/aism/v0.h>
+#include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
+#include <ucsl-reflection/reflections/resources/master-level/v0.h>
+#include <ucsl-reflection/reflections/resources/density-setting/v11.h>
+#include <ucsl-reflection/reflections/resources/aism/v0.h>
 #include <rip/models/binary-file/v2.h>
 #include <rip/models/mirage/v1.h>
 #include <rip/models/mirage/v2.h>
@@ -32,13 +32,7 @@
 #include <string_view>
 #include "config.h"
 
-//inline const char* get_rfl1_class(const ucsl::resources::rfl::v1::Ref1Data<>& parent) { return Config::rflClass.c_str(); }
-//inline const char* get_rfl2_class(const ucsl::resources::rfl::v2::Ref2Data<>& parent) { return Config::rflClass.c_str(); }
-//
-//namespace simplerfl {
-//	template<> struct canonical<ucsl::resources::rfl::v1::Ref1Data<>> { using type = ucsl::resources::rfl::v1::reflections::Ref1Data<ucsl::resources::rfl::v1::Ref1RflData, get_rfl1_class>; };
-//	template<> struct canonical<ucsl::resources::rfl::v2::Ref2Data<>> { using type = ucsl::resources::rfl::v2::reflections::Ref2Data<ucsl::resources::rfl::v2::Ref2RflData, get_rfl2_class>; };
-//}
+inline std::string get_rfl_class() { return Config::rflClass; }
 
 namespace rip::cli::convert {
 	template <size_t N>
@@ -72,10 +66,10 @@ namespace rip::cli::convert {
 			version<"1.03-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_miller::reflections::AsmData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
-		//using gedit = resource<ResourceType::GEDIT, "3",
-		//	version<"2", ucsl::resources::object_world::v2::ObjectWorldData<GI::AllocatorSystem>>,
-		//	version<"3", ucsl::resources::object_world::v3::ObjectWorldData<GI::AllocatorSystem>>
-		//>;
+		using gedit = resource<ResourceType::GEDIT, "3",
+			version<"2", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v2::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"3", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v3::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		//using map = resource<ResourceType::MAP, "1",
 		//	version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
@@ -86,19 +80,19 @@ namespace rip::cli::convert {
 			version<"3", rip::models::MirageContainerV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::material::v3::reflections::ContextsData>, GI::AllocatorSystem>, uint32_t, std::endian::big>
 		>;
 
-		//using rfl = resource<ResourceType::RFL, "2-1.00",
-		//	version<"1", ucsl::resources::rfl::v1::Ref1Data<>>,
-		//	version<"2-1.00", ucsl::resources::rfl::v2::Ref2Data<>>
-		//>;
+		using rfl = resource<ResourceType::RFL, "2-1.00",
+			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::rfl::v1::reflections::Ref1Data<ucsl::resources::rfl::v1::Ref1RflData, simplerfl::selector_resolver<std::string>::impl<get_rfl_class>>>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"2-1.00", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::rfl::v2::reflections::Ref2Data<ucsl::resources::rfl::v2::Ref2RflData, simplerfl::selector_resolver<std::string>::impl<get_rfl_class>>>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		using vat = resource<ResourceType::VAT, "1-miller",
 			version<"1-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::vertex_animation_texture::v1_rangers::reflections::VertexAnimationTextureData>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
 			version<"1-miller", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::vertex_animation_texture::v1_miller::reflections::VertexAnimationTextureData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
-		//using fxcol = resource<ResourceType::FXCOL, "1",
-		//	version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::fxcol::v1::reflections::FxColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
-		//>;
+		using fxcol = resource<ResourceType::FXCOL, "1",
+			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::fxcol::v1::reflections::FxColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		using svcol = resource < ResourceType::SVCOL, "1",
 			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::svcol::v1::reflections::SvColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
@@ -118,36 +112,36 @@ namespace rip::cli::convert {
 		//	version<"1", ucsl::resources::path::v1::PathsData>,
 		//	version<"2.00", ucsl::resources::path::v200::PathsData>
 		//>;
-		//using pcmodel = resource<ResourceType::PCMODEL, "2",
-		//	version<"2", ucsl::resources::pointcloud::v2::PointcloudData>
-		//>;
-		//using mlevel = resource<ResourceType::MASTER_LEVEL, "0",
-		//	version<"0", ucsl::resources::master_level::v0::MasterLevelData>
-		//>;
-		//using density_setting = resource<ResourceType::DENSITY_SETTING, "11",
-		//	version<"11", ucsl::resources::density_setting::v11::DensitySettingData>
-		//>;
-		//using aism = resource<ResourceType::AISM, "0",
-		//	version<"0", ucsl::resources::aism::v0::AIStateMachineData>
-		//>;
+		using pcmodel = resource<ResourceType::PCMODEL, "2",
+			version<"2", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::pointcloud::v2::reflections::PointcloudData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
+		using mlevel = resource<ResourceType::MASTER_LEVEL, "0",
+			version<"0", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::master_level::v0::reflections::MasterLevelData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
+		using density_setting = resource<ResourceType::DENSITY_SETTING, "11",
+			version<"11", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::density_setting::v11::reflections::DensitySettingData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
+		using aism = resource<ResourceType::AISM, "0",
+			version<"0", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::aism::v0::reflections::AIStateMachineData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		using all = std::tuple<
 			animation_state_machine,
-			//gedit,
+			gedit,
 			//map,
 			material,
-			//rfl,
+			rfl,
 			vat,
-			//fxcol,
-			svcol
+			fxcol,
+			svcol,
 			//swif,
 			//sobj,
 			//nxs,
 			//path,
-			//pcmodel,
-			//mlevel,
-			//density_setting,
-			//aism
+			pcmodel,
+			mlevel,
+			density_setting,
+			aism
 		>;
 	}
 }

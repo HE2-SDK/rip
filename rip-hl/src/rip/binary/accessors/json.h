@@ -6,6 +6,7 @@
 #include <rip/util/object-id-guids.h>
 #include <yyjson.h>
 #include <cassert>
+#include <bit>
 
 namespace rip::binary::accessors {
 	//template<bool arrayVectors = false>
@@ -1238,7 +1239,7 @@ namespace rip::binary::accessors {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			inline operator typename Refl::repr () const {
+			inline operator const char* () const {
 				return yyjson_get_str(this->reference);
 			}
 		};
@@ -1247,7 +1248,7 @@ namespace rip::binary::accessors {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			inline operator typename Refl::repr () const {
+			inline operator const char* () const {
 				return yyjson_get_str(this->reference);
 			}
 		};
@@ -1283,14 +1284,66 @@ namespace rip::binary::accessors {
 				return -1;
 			}
 
+			//template<typename F>
+			//constexpr const auto visit(F f) const {
+			//	return this->refl.visit([&](auto r) { return f(PrimitiveDataAccessor<decltype(r)>{ this->reference, r }); });
+			//}
+
+			//template<typename T>
+			//constexpr const auto as() const {
+			//	return this->refl.visit([&](auto r) { if constexpr (std::is_same_v<typename decltype(r)::underlying, T>) return PrimitiveDataAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not the correct primitive type"); });
+			//}
+		};
+
+		template<typename Refl, typename BitfieldRefl>
+		class BitfieldUnderlyingAccessor : public Accessor<Refl> {
+			const BitfieldRefl bitfieldRefl;
+
+		public:
+			constexpr BitfieldUnderlyingAccessor(const Reference& reference, const Refl& refl = Refl{}, const BitfieldRefl& bitfieldRefl = BitfieldRefl{}) : Accessor<Refl>{ reference, refl }, bitfieldRefl{ bitfieldRefl } {}
+
+			inline operator typename Refl::repr() const {
+				if (!yyjson_is_obj(this->reference))
+					throw new std::runtime_error{ "bitfield must be object type in JSON encoding" };
+
+				typename Refl::repr result{};
+
+				if (!this->refl.is_erased) {
+					this->bitfieldRefl.visit_components([&](const auto& component) {
+						auto value = component.get_type().visit([&](const auto& r) -> long long {
+							if constexpr (std::decay_t<decltype(r)>::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE)
+								return PrimitiveAccessor<std::decay_t<decltype(r)>>{ { this->reference, component.get_name() }, r }.visit([&](const auto& pd) -> long long {
+									return static_cast<long long>(pd);
+								});
+							else if constexpr (std::decay_t<decltype(r)>::kind == ucsl::reflection::providers::TypeKind::ENUM)
+								return EnumAccessor<std::decay_t<decltype(r)>>{ { this->reference, component.get_name() }, r };
+							else static_assert(false, "invalid type kind");
+						});
+
+						typename Refl::repr mask{ (1 << component.get_width()) - 1 };
+						typename Refl::repr value_in_underlying = *reinterpret_cast<typename Refl::repr*>(&value);
+
+						result = (result & ~(mask << component.get_offset())) | ((value_in_underlying & mask) << component.get_offset());
+					});
+				}
+
+				return result;
+			}
+		};
+
+		template<typename Refl>
+		class BitfieldAccessor : public Accessor<Refl> {
+		public:
+			using Accessor<Refl>::Accessor;
+
 			template<typename F>
 			constexpr const auto visit(F f) const {
-				return this->refl.visit([&](auto r) { return f(PrimitiveDataAccessor<decltype(r)>{ this->reference, r }); });
+				return this->refl.visit_underlying([&](const auto& r) { return f(BitfieldUnderlyingAccessor<std::decay_t<decltype(r)>, Refl>{ this->reference, r, this->refl }); });
 			}
 
 			template<typename T>
 			constexpr const auto as() const {
-				return this->refl.visit([&](auto r) { if constexpr (std::is_same_v<typename decltype(r)::repr, T>) return PrimitiveDataAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not the correct primitive type"); });
+				return this->refl.visit_underlying([&](const auto& r) { if constexpr (std::is_same_v<typename std::decay_t<decltype(r)>::repr, T>) return BitfieldUnderlyingAccessor<std::decay_t<decltype(r)>, Refl>{ this->reference, r, this->refl }; else static_assert(false, "not the correct primitive type"); });
 			}
 		};
 
@@ -1495,7 +1548,7 @@ namespace rip::binary::accessors {
 			constexpr auto operator[](const FieldRefl& field_refl) const {
 				auto type = field_refl.get_type(*this);
 
-				return this->refl.visit_current_field([&](auto r) { if constexpr (std::is_same_v<decltype(r), FieldRefl>) return ValueAccessor<decltype(r)>{ this->reference, type }; else static_assert(false, "not the correct structure type"); });
+				return ValueAccessor<decltype(type)>{ this->reference, type };
 			}
 
 			template<simplerfl::strlit FieldName>
@@ -1504,11 +1557,9 @@ namespace rip::binary::accessors {
 			}
 
 			template<typename F>
-			constexpr const auto visit(F f) const {
-				return this->refl.visit_current_field([&](auto field_refl) {
-					auto type = field_refl.get_type();
-
-					return f(ValueAccessor<decltype(type)>{ this->reference, type });
+			constexpr void visit(F f) const {
+				this->refl.visit_current_field([&](const auto& field_refl) {
+					f((*this)[field_refl]);
 				});
 			}
 		};
@@ -1517,12 +1568,12 @@ namespace rip::binary::accessors {
 		class ArrayAccessor : public Accessor<Refl> {
 		public:
 			class const_iterator {
-				ArrayAccessor& accessor;
+				const ArrayAccessor& accessor;
 				yyjson_val* val;
 				size_t idx{};
 
 			public:
-				constexpr const_iterator(ArrayAccessor& accessor, yyjson_val* val, size_t idx) : accessor{ accessor }, val{ val }, idx{ idx } {}
+				constexpr const_iterator(const ArrayAccessor& accessor, yyjson_val* val, size_t idx) : accessor{ accessor }, val{ val }, idx{ idx } {}
 				constexpr const_iterator(const const_iterator& other) : accessor{ other.accessor }, val{ other.val }, idx{ other.idx } {}
 
 				constexpr const_iterator& operator++() {
@@ -1577,7 +1628,7 @@ namespace rip::binary::accessors {
 				return this->refl.visit([&](auto r) {
 					if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return f(PrimitiveAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return f(EnumAccessor<decltype(r)>{ this->reference, r });
-					//else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::FLAGS) return f(flags(this->reference, refl.is_erased(), r));
+					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::BITFIELD) return f(BitfieldAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ARRAY) return f(ArrayAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return f(ArrayAccessor<decltype(r)>{ this->reference, r });
 					else if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return f(PointerAccessor<decltype(r)>{ this->reference, r });
@@ -1594,6 +1645,10 @@ namespace rip::binary::accessors {
 
 			constexpr auto as_enum() const {
 				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return EnumAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not an enum"); });
+			}
+
+			constexpr auto as_bitfield() const {
+				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::BITFIELD) return BitfieldAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a bitfield"); });
 			}
 
 			constexpr auto as_array() const {

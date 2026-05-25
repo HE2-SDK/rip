@@ -96,6 +96,6 @@ namespace rip::util {
 	template<typename T>
 	inline void byteswap_deep_to_native(std::endian endianness, T& value) noexcept {
 		if (std::endian::native != endianness)
-			byteswap_deep(value);
+			  byteswap_deep(value);
 	}
 }
