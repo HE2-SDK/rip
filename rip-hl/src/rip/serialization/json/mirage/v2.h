@@ -19,7 +19,7 @@ namespace rip::serialization {
 					yyjson_mut_arr_add_val(children, saveNode(doc, child));
 			}
 			else if (node.content.has_value())
-				yyjson_mut_obj_add_val(doc, obj, "content", json<typename models::MirageContainerV2<Refl, AllocatorSystem>::ContextsModel>::save(doc, node.content.value()));
+				yyjson_mut_obj_add_val(doc, obj, "content", json<typename models::MirageContainerV2<Refl, AllocatorSystem>::ContextsModel, arrayVectors>::save(doc, node.content.value()));
 
 			return obj;
 		}
@@ -54,7 +54,7 @@ namespace rip::serialization {
 				return { std::string_view{ yyjson_get_str(name) }, static_cast<unsigned int>(yyjson_get_uint(value)), {}, std::move(childVec) };
 			}
 			else
-				return { std::string_view{ yyjson_get_str(name) }, static_cast<unsigned int>(yyjson_get_uint(value)), content != nullptr ? std::make_optional(json<typename models::MirageContainerV2<Refl, AllocatorSystem>::ContextsModel>::load(doc, content)) : std::nullopt, {}};
+				return { std::string_view{ yyjson_get_str(name) }, static_cast<unsigned int>(yyjson_get_uint(value)), content != nullptr ? std::make_optional(json<typename models::MirageContainerV2<Refl, AllocatorSystem>::ContextsModel, arrayVectors>::load(doc, content)) : std::nullopt, {}};
 		}
 
 	public:

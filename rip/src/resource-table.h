@@ -54,11 +54,12 @@ namespace rip::cli::convert {
 			static constexpr strlit defaultVersion = defaultVersion_;
 			using versions = std::tuple<Versions...>;
 		};
-		template<strlit name_, typename ResourceDef, typename AddrType, std::endian endianness_> struct version {
+		template<strlit name_, typename ResourceDef, typename AddrType, std::endian endianness_, bool isHSONCompatible_ = false> struct version {
 			static constexpr strlit name = name_;
 			using resourceDef = ResourceDef;
 			using addrType = AddrType;
 			static constexpr std::endian endianness = endianness_;
+			static constexpr bool isHSONCompatible = isHSONCompatible_;
 		};
 
 		using animation_state_machine = resource<ResourceType::ASM, "1.03-miller",
@@ -67,8 +68,8 @@ namespace rip::cli::convert {
 		>;
 
 		using gedit = resource<ResourceType::GEDIT, "3",
-			version<"2", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v2::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
-			version<"3", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v3::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+			version<"2", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v2::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little, true>,
+			version<"3", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v3::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little, true>
 		>;
 
 		//using map = resource<ResourceType::MAP, "1",

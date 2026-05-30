@@ -14,7 +14,7 @@ namespace rip::serialization {
 
 					yyjson_mut_obj_add_str(doc, obj, "type", models::NeedleArchiveV1<AllocatorSystem, terrain>::template chunk_type_id_v<std::decay_t<decltype(content)>>);
 					yyjson_mut_obj_add_strcpy(doc, obj, "name", chunk.name.c_str());
-					yyjson_mut_obj_add_val(doc, obj, "content", json<std::decay_t<decltype(content)>>::save(doc, content));
+					yyjson_mut_obj_add_val(doc, obj, "content", json<std::decay_t<decltype(content)>, arrayVectors>::save(doc, content));
 				}, chunk.content);
 			}
 
@@ -47,9 +47,9 @@ namespace rip::serialization {
 				auto* nameStr = yyjson_get_str(name);
 
 				if (!strcmp(typeStr, models::NeedleArchiveV1<AllocatorSystem, terrain>::template chunk_type_id_v<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::ModelV5Model>))
-					chunks.emplace_back(nameStr, json<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::ModelV5Model>::load(doc, content));
+					chunks.emplace_back(nameStr, json<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::ModelV5Model, arrayVectors>::load(doc, content));
 				else if (!strcmp(typeStr, models::NeedleArchiveV1<AllocatorSystem, terrain>::template chunk_type_id_v<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::LODInfoV1Model>))
-					chunks.emplace_back(nameStr, json<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::LODInfoV1Model>::load(doc, content));
+					chunks.emplace_back(nameStr, json<typename models::NeedleArchiveV1<AllocatorSystem, terrain>::LODInfoV1Model, arrayVectors>::load(doc, content));
 				else
 					throw std::runtime_error{ "Unknown NEDARCV1 chunk!" };
 			}

@@ -424,7 +424,7 @@ namespace rip::binary::accessors {
 
 					stream.read(offset);
 
-					return ValueAccessor<decltype(item_type)>{ { this->reference.stream, offset.value() }, item_type };
+					return ValueAccessor<decltype(item_type)>{ { this->reference.stream, offset.value() + i * item_type.template get_size<typename Stream::AddrType>(ValueAccessor<decltype(item_type)>{ { this->reference.stream, offset.value() }, item_type }) }, item_type };
 				});
 			}
 

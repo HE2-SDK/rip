@@ -9,7 +9,7 @@ namespace rip::serialization {
 			auto* obj = yyjson_mut_obj(doc);
 
 			yyjson_mut_obj_add_uint(doc, obj, "version", model.version);
-			yyjson_mut_obj_add_val(doc, obj, "content", json<typename models::MirageContainerV1<Refl, AllocatorSystem>::ContextsModel>::save(doc, model.content));
+			yyjson_mut_obj_add_val(doc, obj, "content", json<typename models::MirageContainerV1<Refl, AllocatorSystem>::ContextsModel, arrayVectors>::save(doc, model.content));
 
 			return obj;
 		}
@@ -27,7 +27,7 @@ namespace rip::serialization {
 			if (content == nullptr)
 				throw new std::runtime_error{ "MIRAGE v1 container parsing: `content` property must exist" };
 
-			return { static_cast<unsigned int>(yyjson_get_uint(version)), json<typename models::MirageContainerV1<Refl, AllocatorSystem>::ContextsModel>::load(doc, content) };
+			return { static_cast<unsigned int>(yyjson_get_uint(version)), json<typename models::MirageContainerV1<Refl, AllocatorSystem>::ContextsModel, arrayVectors>::load(doc, content) };
 		}
 	};
 }

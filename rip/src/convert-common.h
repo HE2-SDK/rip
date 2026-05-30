@@ -3,11 +3,12 @@
 #include <config.h>
 #include <rip/serialization/binary.h>
 #include <rip/serialization/json.h>
+#include <rip/serialization/hson.h>
 #include "resource-table.h"
 
 namespace rip::cli::convert {
-	template<typename T, typename AddrType, std::endian endianness>
-	T loadVersion(const Config& config) {
+	template<typename V>
+	typename V::resourceDef loadVersion(const Config& config) {
 		switch (config.getInputFormat()) {
 		case Format::BINARY: {
 			std::ifstream ifs{ config.inputFile, std::ios::binary | std::ios::ate };
@@ -19,9 +20,9 @@ namespace rip::cli::convert {
 			ifs.read((char*)data.get(), size);
 
 			rip::binary::mem_istream mis{ data.get() };
-			rip::binary::binary_istream<rip::binary::mem_istream, AddrType> bis{ mis, endianness };
+			rip::binary::binary_istream<rip::binary::mem_istream, typename V::addrType> bis{ mis, V::endianness };
 
-			return rip::serialization::binary<T>::load(bis);
+			return rip::serialization::binary<typename V::resourceDef>::load(bis);
 		}
 		case Format::JSON: {
 			yyjson_read_err err;
@@ -29,34 +30,44 @@ namespace rip::cli::convert {
 			if (err.code != YYJSON_READ_SUCCESS)
 				throw std::runtime_error{ std::string{ "Error reading json: " } + err.msg };
 
-			auto result = rip::serialization::json<T>::load(doc, yyjson_doc_get_root(doc));
+			auto result = rip::serialization::json<typename V::resourceDef>::load(doc, yyjson_doc_get_root(doc));
 
 			yyjson_doc_free(doc);
 
 			return result;
+		}
+		case Format::HSON: {
+			if constexpr (V::isHSONCompatible) {
+				std::ifstream ifs{ config.inputFile, std::ios::binary | std::ios::ate };
+
+				return rip::serialization::hson<GI, typename V::resourceDef>::load(ifs);
+			}
+			else {
+				throw std::runtime_error{ "This resource is not compatible with HSON." };
+			}
 		}
 		default:
 			return {};
 		}
 	}
 
-	template<typename T, typename AddrType, std::endian endianness>
-	void saveVersion(const Config& config, const T& model) {
+	template<typename V>
+	void saveVersion(const Config& config, const typename V::resourceDef& model) {
 		switch (config.getOutputFormat()) {
 		case Format::BINARY: {
-			std::ofstream ofs{ config.getOutputFile(), std::ios::binary | std::ios::trunc};
+			std::ofstream ofs{ config.getOutputFile(), std::ios::binary | std::ios::trunc };
 
 			rip::binary::fast_ostream fos{ ofs };
-			rip::binary::binary_ostream<rip::binary::fast_ostream, AddrType, endianness> bos{ fos };
+			rip::binary::binary_ostream<rip::binary::fast_ostream, typename V::addrType, V::endianness> bos{ fos };
 
-			rip::serialization::binary<T>::save(bos, model);
+			rip::serialization::binary<typename V::resourceDef>::save(bos, model);
 
 			break;
 		}
 		case Format::JSON: {
 			auto* doc = yyjson_mut_doc_new(nullptr);
 
-			auto* result = rip::serialization::json<T>::save(doc, model);
+			auto* result = rip::serialization::json<typename V::resourceDef>::save(doc, model);
 
 			yyjson_mut_doc_set_root(doc, result);
 
@@ -75,15 +86,26 @@ namespace rip::cli::convert {
 
 			break;
 		}
+		case Format::HSON: {
+			if constexpr (V::isHSONCompatible) {
+				std::ofstream ofs{ config.getOutputFile(), std::ios::binary | std::ios::trunc };
+
+				rip::serialization::hson<GI, typename V::resourceDef>::save(ofs, model);
+			}
+			else {
+				throw std::runtime_error{ "This resource is not compatible with HSON." };
+			}
+			break;
+		}
 		default:
 			break;
 		}
 	}
 
-	template<typename T, typename AddrType, std::endian endianness>
+	template<typename V>
 	void convertVersion(const Config& config) {
-		T model = loadVersion<T, AddrType, endianness>(config);
-		saveVersion<T, AddrType, endianness>(config, model);
+		typename V::resourceDef model = loadVersion<V>(config);
+		saveVersion<V>(config, model);
 	}
 
 	template<ResourceType type, strlit defaultVersion, typename... Versions>
@@ -91,7 +113,7 @@ namespace rip::cli::convert {
 		std::string defVer = defaultVersion;
 		std::string version = config.version.value_or(defVer);
 
-		if (!((version == Versions::name.operator std::string() && (convertVersion<typename Versions::resourceDef, typename Versions::addrType, Versions::endianness>(config), true)) || ...))
+		if (!((version == Versions::name.operator std::string() && (convertVersion<Versions>(config), true)) || ...))
 			throw std::runtime_error{ std::string{ "Version " } + version + " is invalid for selected resource type." };
 	}
 }
