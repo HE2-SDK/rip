@@ -3,13 +3,13 @@
 #include <rip/serialization/json/raw.h>
 
 namespace rip::serialization {
-	template<typename Refl, typename AllocatorSystem, bool arrayVectors>
-	struct json<models::BinaryFileV1<Refl, AllocatorSystem>, arrayVectors> {
-		inline static yyjson_mut_val* save(yyjson_mut_doc* doc, const models::BinaryFileV1<Refl, AllocatorSystem>& model) {
+	template<typename Refl, typename AllocatorSystem, bool arrayVectors, bool include_bvh>
+	struct json<models::BinaryFileV1<Refl, AllocatorSystem, include_bvh>, arrayVectors> {
+		inline static yyjson_mut_val* save(yyjson_mut_doc* doc, const models::BinaryFileV1<Refl, AllocatorSystem, include_bvh>& model) {
 			return json<models::Raw<Refl, AllocatorSystem>, arrayVectors>::save(doc, model.data);
 		}
 
-		inline static models::BinaryFileV1<Refl, AllocatorSystem> load(yyjson_doc* doc, yyjson_val* value) {
+		inline static models::BinaryFileV1<Refl, AllocatorSystem, include_bvh> load(yyjson_doc* doc, yyjson_val* value) {
 			return { json<models::Raw<Refl, AllocatorSystem>, arrayVectors>::load(doc, value) };
 		}
 	};

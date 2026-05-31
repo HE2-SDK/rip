@@ -75,8 +75,8 @@ namespace rip::serialization::hson_internal {
 
 		namespace sobj {
 			struct ObjectTransformData {
-				std::optional<std::array<float, 3>> position;
-				std::optional<std::array<float, 3>> rotation;
+				std::array<float, 3> position;
+				std::array<float, 3> rotation;
 			};
 
 			struct ObjectData {
@@ -87,7 +87,7 @@ namespace rip::serialization::hson_internal {
 				float m_distance;
 				float m_range;
 				std::vector<ObjectTransformData> instances;
-				::rfl::Generic spawnerData;
+				::rfl::Object<::rfl::Generic> spawnerData;
 			};
 
 			struct ObjectTypeData {
@@ -108,6 +108,18 @@ namespace rip::serialization::hson_internal {
 				unsigned int objectInstanceCount;
 			};
 		}
+	}
+
+	inline std::array<float, 4> eulerToQuat(const std::array<float, 3>& vec) {
+		auto quat = util::eulerToQuat(Eigen::Vector3f{ vec.data() });
+
+		return std::array<float, 4>{ quat.x(), quat.y(), quat.z(), quat.w() };
+	}
+
+	inline std::array<float, 3> quatToEuler(const std::array<float, 4>& quat) {
+		auto vec = util::quatToEuler(Eigen::Quaternionf{ quat.data() });
+
+		return std::array<float, 3>{ vec.x(), vec.y(), vec.z() };
 	}
 
 	inline bool hasParent(const reflections::hson::Object& object) {

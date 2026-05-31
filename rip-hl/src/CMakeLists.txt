@@ -52,6 +52,7 @@ target_sources(rip-hl
         "rip/serialization/hson/object-world/common.h"
         "rip/serialization/hson/object-world/v2.h"
         "rip/serialization/hson/object-world/v3.h"
+        "rip/serialization/hson/sobj/v1.h"
         "rip/serialization/binary.h"
         "rip/serialization/json.h"
         "rip/serialization/rfl.h"
