@@ -136,7 +136,7 @@ namespace rip::schemas::hedgeset {
 			if (type == "color8") return templ.format == "gedit_v2" ? MemberType::COLOR_BYTE_RGBA : MemberType::COLOR_BYTE_ABGR;
 			if (type == "colorf") return templ.format == "gedit_v2" ? MemberType::COLOR_FLOAT_RGBA : MemberType::COLOR_FLOAT_ABGR;
 			if (type == "string") return MemberType::STRING;
-			if (type == "object_reference") return templ.format == "gedit_v2" ? MemberType::OBJECT_ID_V1 : MemberType::OBJECT_ID_V2;
+			if (type == "object_reference") return templ.format == "gedit_v2" || templ.format == "sobj_v1" ? MemberType::OBJECT_ID_V1 : MemberType::OBJECT_ID_V2;
 			return MemberType::VOID;
 		}
 
@@ -361,7 +361,7 @@ namespace rip::schemas::hedgeset {
 
 		template<typename Range>
 		json_reflections::RangeProps generate_range(const typename GameInterface::RflSystem::RflClassMember& member) {
-			auto* range = member.GetRange<Range>();
+			auto* range = member.template GetRange<Range>();
 
 			return range == nullptr ? json_reflections::RangeProps{} : json_reflections::RangeProps{ get_range_value<Range>(range->min), get_range_value<Range>(range->max), get_range_value<Range>(range->step) };
 		}

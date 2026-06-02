@@ -1,8 +1,4 @@
 #include <config.h>
-#include <io/mem_stream.h>
-#include <io/load_hedgeset_template.h>
-//#include <io/load_input.h>
-//#include <io/write_output.h>
 #include <convert.h>
 #include <util.h>
 #include <CLI/CLI.hpp>
@@ -10,6 +6,7 @@
 #include <map>
 #undef SYNCHRONIZE
 #undef VOID
+#include <rip/schemas/hedgeset.h>
 
 std::map<std::string, Format> formatMap{
 	{ "binary", Format::BINARY },
@@ -79,8 +76,11 @@ int main(int argc, char** argv) {
 
 		ucsl::reflection::game_interfaces::standalone::StandaloneGameInterface::boot();
 
-		if (!config.hedgesetTemplate.empty())
-			loadHedgesetTemplate(config);
+		if (!config.hedgesetTemplate.empty()) {
+			auto templ = rip::schemas::hedgeset::load(config.hedgesetTemplate.generic_string());
+			rip::schemas::hedgeset::schema_builder s{ templ };
+			GI::reflectionDB->load_schema(s.get_schema());
+		}
 
 		rip::cli::convert::convert(config);
 

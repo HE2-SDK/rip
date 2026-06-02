@@ -298,7 +298,7 @@ namespace rip::binary::accessors {
 
 					AddressAccessor<decltype(target_type)> addr{ { this->reference.stream, offset.value() }, target_type };
 
-					return target_type.template get_size<typename Stream::AddrType>(*addr) > 0 ? addr : AddressAccessor<decltype(target_type)> { { this->reference.stream, 0ull }, target_type };
+					return addr;// target_type.template get_size<typename Stream::AddrType>(*addr) > 0 ? addr : AddressAccessor<decltype(target_type)>{ {this->reference.stream, 0ull}, target_type };
 				});
 			}
 
@@ -494,41 +494,15 @@ namespace rip::binary::accessors {
 				});
 			}
 
-			constexpr auto as_primitive() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return PrimitiveAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a primitive"); });
-			}
-
-			constexpr auto as_enum() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return EnumAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not an enum"); });
-			}
-
-			constexpr auto as_bitfield() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::BITFIELD) return BitfieldAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a bitfield"); });
-			}
-
-			constexpr auto as_array() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ARRAY) return ArrayAccessor<ucsl::containers::arrays::Array, decltype(r)>{ this->reference, r }; else static_assert(false, "not a array"); });
-			}
-
-			constexpr auto as_tarray() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r }; else static_assert(false, "not a tarray"); });
-			}
-
-			constexpr auto as_carray() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return CArrayAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a carray"); });
-			}
-
-			constexpr auto as_pointer() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return PointerAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a pointer"); });
-			}
-
-			constexpr auto as_union() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return UnionAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a union"); });
-			}
-
-			constexpr auto as_structure() const {
-				return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return StructureAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a structure"); });
-			}
+			constexpr auto as_primitive() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::PRIMITIVE) return PrimitiveAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a primitive"); }); }
+			constexpr auto as_enum() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ENUM) return EnumAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not an enum"); }); }
+			constexpr auto as_bitfield() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::BITFIELD) return BitfieldAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a bitfield"); }); }
+			constexpr auto as_array() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::ARRAY) return ArrayAccessor<ucsl::containers::arrays::Array, decltype(r)>{ this->reference, r }; else static_assert(false, "not a array"); }); }
+			constexpr auto as_tarray() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::TARRAY) return ArrayAccessor<ucsl::containers::arrays::TArray, decltype(r)>{ this->reference, r }; else static_assert(false, "not a tarray"); }); }
+			constexpr auto as_carray() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::CARRAY) return CArrayAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a carray"); }); }
+			constexpr auto as_pointer() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::POINTER) return PointerAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a pointer"); }); }
+			constexpr auto as_union() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::UNION) return UnionAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a union"); }); }
+			constexpr auto as_structure() const { return this->refl.visit([&](auto r) { if constexpr (decltype(r)::kind == ucsl::reflection::providers::TypeKind::STRUCTURE) return StructureAccessor<decltype(r)>{ this->reference, r }; else static_assert(false, "not a structure"); }); }
 		};
 	};
 }

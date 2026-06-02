@@ -129,22 +129,22 @@ namespace rip::cli::convert {
 		>;
 
 		using all = std::tuple<
-			animation_state_machine,
-			gedit,
-			//map,
-			material,
-			rfl,
-			vat,
-			fxcol,
-			svcol,
-			//swif,
-			sobj,
-			//nxs,
-			//path,
-			pcmodel,
-			mlevel,
-			density_setting,
-			aism
+			//animation_state_machine,
+			//gedit,
+			////map,
+			//material,
+			//rfl,
+			//vat,
+			//fxcol,
+			//svcol,
+			////swif,
+			sobj
+			////nxs,
+			////path,
+			//pcmodel,
+			//mlevel,
+			//density_setting,
+			//aism
 		>;
 	}
 }
