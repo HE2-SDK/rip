@@ -71,9 +71,6 @@ int main(int argc, char** argv) {
 		std::cerr << "Input file: " << config.inputFile.generic_string() << std::endl;
 		std::cerr << "Output file: " << config.getOutputFile().generic_string() << std::endl;
 
-		if (config.getInputFormat() == Format::HSON)
-			throw new std::runtime_error{ "HSON input currently not yet supported." };
-
 		ucsl::reflection::game_interfaces::standalone::StandaloneGameInterface::boot();
 
 		if (!config.hedgesetTemplate.empty()) {

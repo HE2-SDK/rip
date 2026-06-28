@@ -105,8 +105,8 @@ namespace rip::cli::convert {
 		//	version<"6", ucsl::resources::swif::v6::SRS_PROJECT>
 		//>;
 		using sobj = resource<ResourceType::SOBJ, "1",
-			version<"1-colors", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint32_t, std::endian::big>,
-			version<"1-scu", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint64_t, std::endian::little>
+			version<"1-colors", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint32_t, std::endian::big, true>,
+			version<"1-scu", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint64_t, std::endian::little, true>
 		>;
 		//using nxs = resource<ResourceType::NXS, "1",
 		//	version<"1", ucsl::resources::nxs::v1::NXSData>

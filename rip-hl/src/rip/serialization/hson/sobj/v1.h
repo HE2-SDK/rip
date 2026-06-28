@@ -38,8 +38,8 @@ namespace rip::serialization {
 	}
 
 	template<typename GameInterface>
-	struct hson<GameInterface, models::BinaryFileV2<typename ucsl::reflection::providers::simplerfl<GameInterface>::template RootType<typename ucsl::resources::sobj::v1::reflections::SetObjectData<typename GameInterface::AllocatorSystem>>, typename GameInterface::AllocatorSystem>> {
-		typedef models::BinaryFileV2<typename ucsl::reflection::providers::simplerfl<GameInterface>::template RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<typename GameInterface::AllocatorSystem>>, typename GameInterface::AllocatorSystem> Model;
+	struct hson<GameInterface, models::BinaryFileV1<typename ucsl::reflection::providers::simplerfl<GameInterface>::template RootType<typename ucsl::resources::sobj::v1::reflections::SetObjectData<typename GameInterface::AllocatorSystem>>, typename GameInterface::AllocatorSystem, true>> {
+		typedef models::BinaryFileV1<typename ucsl::reflection::providers::simplerfl<GameInterface>::template RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<typename GameInterface::AllocatorSystem>>, typename GameInterface::AllocatorSystem, true> Model;
 
 		inline static void save(std::ostream& stream, const Model& model) {
 			auto rflData = rfl<Model, true>::save(model);
