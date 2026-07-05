@@ -100,7 +100,7 @@ namespace rip::cli::convert {
 		>;
 
 		using map = resource<ResourceType::MAP, "1",
-			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::map::v1::reflections::MapData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint32_t, std::endian::big>
+			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::map::v1::reflections::MapData>, GI::AllocatorSystem>, uint32_t, std::endian::big>
 		>;
 
 		using material = resource<ResourceType::MATERIAL, "3",
@@ -155,22 +155,22 @@ namespace rip::cli::convert {
 		>;
 
 		using all = std::tuple<
-			//animation_state_machine,
-			//gedit,
-			//map,
-			//material,
-			//rfl,
-			//vat,
-			//fxcol,
-			//svcol,
-			//swif,
-			//sobj,
-			//nxs,
-			//path,
-			//pcmodel,
-			//mlevel,
-			density_setting
-			//aism
+			animation_state_machine,
+			gedit,
+			map,
+			material,
+			rfl,
+			vat,
+			fxcol,
+			svcol,
+			swif,
+			sobj,
+			nxs,
+			path,
+			pcmodel,
+			mlevel,
+			density_setting,
+			aism
 		>;
 	}
 }

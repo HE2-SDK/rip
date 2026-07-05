@@ -85,6 +85,7 @@ namespace rip::schemas::hedgeset {
 		struct Template {
 			unsigned int version{};
 			std::string format{};
+			std::optional<bool> collapseParents{};
 			std::map<std::string, EnumDef> enums{};
 			std::map<std::string, StructDef> structs{};
 			std::map<std::string, ObjectDef> objects{};
@@ -209,28 +210,9 @@ namespace rip::schemas::hedgeset {
 			return enums[name];
 		}
 
-		std::shared_ptr<StandaloneRflSystem::RflClass> load_rfl_class(const std::string& name) {
-			if (schema.classes.contains(name))
-				return schema.classes[name];
-
-			const json_reflections::StructDef& structDef = templ.structs.at(name);
-
-			auto [resIt, resSuccess] = schema.classes.emplace(name, std::make_shared<StandaloneRflSystem::RflClass>(name, std::nullopt, 0, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassEnum>>{}, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>{}, 0));
-			auto [resName, res] = *resIt;
-
-			std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>> structEnums{};
-			std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>> structMembers{};
-
-			unsigned int offset{};
-
-			std::optional<std::shared_ptr<StandaloneRflSystem::RflClass>> parent{};
-
-			if (structDef.parent.has_value()) {
-				parent = load_rfl_class(structDef.parent.value());
-				offset = parent.value()->GetSize();
-			}
-
-			res->parent = parent;
+		void add_fields(std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>>& structEnums, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>& structMembers, unsigned int& offset, const json_reflections::StructDef& structDef) {
+			if (templ.collapseParents.value_or(false) && structDef.parent.has_value())
+				add_fields(structEnums, structMembers, offset, templ.structs.at(structDef.parent.value()));
 
 			if (structDef.fields.has_value()) {
 				for (auto& memberDef : structDef.fields.value()) {
@@ -251,6 +233,32 @@ namespace rip::schemas::hedgeset {
 					offset += (unsigned int)member->GetSize();
 				}
 			}
+		}
+
+		std::shared_ptr<StandaloneRflSystem::RflClass> load_rfl_class(const std::string& name) {
+			if (schema.classes.contains(name))
+				return schema.classes[name];
+
+			const json_reflections::StructDef& structDef = templ.structs.at(name);
+
+			auto [resIt, resSuccess] = schema.classes.emplace(name, std::make_shared<StandaloneRflSystem::RflClass>(name, std::nullopt, 0, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassEnum>>{}, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>{}, 0));
+			auto [resName, res] = *resIt;
+
+			std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>> structEnums{};
+			std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>> structMembers{};
+
+			unsigned int offset{};
+
+			std::optional<std::shared_ptr<StandaloneRflSystem::RflClass>> parent{};
+
+			if (!templ.collapseParents.value_or(false) && structDef.parent.has_value()) {
+				parent = load_rfl_class(structDef.parent.value());
+				offset = parent.value()->GetSize();
+			}
+
+			res->parent = parent;
+
+			add_fields(structEnums, structMembers, offset, structDef);
 
 			auto vals = std::views::values(structEnums);
 			std::ranges::copy(vals.begin(), vals.end(), std::back_inserter(res->enums));

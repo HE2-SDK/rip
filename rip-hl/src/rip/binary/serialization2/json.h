@@ -169,7 +169,7 @@ namespace rip::binary {
 
 		inline yyjson_mut_val* process_primitive_data(const ucsl::math::Matrix34& obj) {
 			yyjson_mut_val* res = yyjson_mut_arr(doc);
-			for (size_t i = 0; i < obj.rows(); i++)
+			for (size_t i = 0; i < obj.matrix().rows(); i++)
 				for (size_t j = 0; j < obj.cols(); j++)
 					yyjson_mut_arr_add_float(doc, res, obj(i, j));
 			return res;
@@ -304,10 +304,27 @@ namespace rip::binary {
 
 		template<ucsl::reflection::accessors::PointerAccessor T>
 		inline yyjson_mut_val* process_pointer(const T& obj) {
-			if (obj == nullptr)
-				return yyjson_mut_null(doc);
+			if (obj == nullptr) {
+				return obj.refl.get_target_type().visit([&](const auto& targetRefl) {
+					if constexpr (std::decay_t<decltype(targetRefl)>::kind == providers::TypeKind::CARRAY)
+						return yyjson_mut_arr(doc);
+					else
+						return yyjson_mut_null(doc);
+				});
+			}
 
 			auto target = *obj;
+
+			auto* emptyArr = target.visit([&](const auto& v) -> yyjson_mut_val* {
+				if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY)
+					return v.size() == 0 ? yyjson_mut_arr(doc) : nullptr;
+				else
+					return nullptr;
+			});
+
+			if (emptyArr != nullptr)
+				return emptyArr;
+
 			auto& knownPtr = lookupPtr(target);
 
 			if (knownPtr.resolvedTarget.has_value()) {
@@ -324,7 +341,7 @@ namespace rip::binary {
 			else {
 				resolvePtr(knownPtr);
 
-				target.visit([&](auto v) {
+				target.visit([&](const auto& v) {
 					if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
 						size_t idx{};
 

@@ -1156,7 +1156,7 @@ namespace rip::binary::accessors {
 			inline operator typename Refl::repr () const {
 				typename Refl::repr res{};
 
-				assert(yyjson_arr_size(this->reference) == 12);
+				assert(yyjson_arr_size(this->reference) == 16);
 				size_t i, max;
 				yyjson_val* item;
 				yyjson_arr_foreach(this->reference, i, max, item) {

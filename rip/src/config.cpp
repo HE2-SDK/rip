@@ -93,7 +93,7 @@ Format Config::getOutputFormat() const {
 	if (outputFile.extension() == ".hson")
 		return Format::HSON;
 
-	if (outputFile.extension().generic_string() == extByResourceType[getResourceType()])
+	if (getResourceTypeByExtension(outputFile) == getResourceType())
 		return Format::BINARY;
 
 	throw std::runtime_error{ "The output format was not specified and it cannot be deduced from the other selected options." };
