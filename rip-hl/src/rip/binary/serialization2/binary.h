@@ -5,8 +5,9 @@
 #include <ucsl-reflection/accessors/types.h>
 #include <ucsl-reflection/opaque.h>
 #include <rip/binary/types.h>
-#include "BlobWorker.h"
+//#include "BlobWorker.h"
 #include <iostream>
+#include <queue>
 
 namespace rip::binary {
 	using namespace ucsl::reflection;
@@ -21,8 +22,21 @@ namespace rip::binary {
 			std::vector<size_t> weakPtrs{};
 		};
 
+		struct WorkQueueEntry {
+			size_t offset;
+			size_t alignment;
+			std::function<void()> processFunc;
+		};
+
 		std::unordered_map<size_t, DisambiguatedPointer> knownPtrs{};
-		BlobWorker<> worker{ backend.tellp() };
+		std::queue<WorkQueueEntry> workQueue{};
+		size_t nextOffset{};
+
+		inline size_t allocate(size_t size, size_t alignment) {
+			size_t offset = align(nextOffset, alignment);
+			nextOffset = offset + size;
+			return offset;
+		}
 
 		template<typename Refl>
 		constexpr size_t countPtrDepth(const Refl& refl) {
@@ -34,11 +48,11 @@ namespace rip::binary {
 		}
 
 		template<typename T>
-		DisambiguatedPointer& lookupPtr(const T& obj) {
+		inline DisambiguatedPointer& lookupPtr(const T& obj) {
 			return knownPtrs[static_cast<size_t>(&obj) ^ countPtrDepth(obj.refl)];
 		}
 
-		void resolvePtr(DisambiguatedPointer& knownPtr, offset_t<void> targetOffset) {
+		inline void resolvePtr(DisambiguatedPointer& knownPtr, offset_t<void> targetOffset) {
 			auto pos = backend.tellp();
 
 			for (auto weakPtrLoc : knownPtr.weakPtrs) {
@@ -53,7 +67,7 @@ namespace rip::binary {
 		}
 
 		template<typename T>
-		offset_t<T> enqueueBlock(size_t bufferSize, size_t alignment, auto processFunc) {
+		inline offset_t<T> enqueueBlock(size_t bufferSize, size_t alignment, auto processFunc) {
 			assert(bufferSize > 0);
 
 			//if (ptr == nullptr)
@@ -63,17 +77,19 @@ namespace rip::binary {
 			//if (it != knownPtrs.end() && bufferSize <= it->second.bufferSize)
 			//	return it->second.offset;
 
-			size_t offset = worker.enqueueBlock(bufferSize, alignment, [this, bufferSize, processFunc](size_t offset, size_t alignment) {
-				backend.write_padding(alignment);
-				assert(backend.tellp() == offset);
-
-				processFunc();
-
-				assert(backend.tellp() == offset + bufferSize);
-			});
-
-			//knownPtrs[ptr] = { offset, bufferSize };
+			size_t offset = allocate(bufferSize, alignment);
+			workQueue.push(WorkQueueEntry{ offset, alignment, processFunc });
 			return offset;
+		}
+
+		inline void processQueuedBlocks() {
+			while (!workQueue.empty()) {
+				auto chunk = workQueue.front();
+				workQueue.pop();
+
+				backend.write_padding(chunk.alignment);
+				chunk.processFunc();
+			}
 		}
 
 		template<typename T, std::enable_if_t<!std::is_fundamental_v<T>, bool> = true>
@@ -95,21 +111,6 @@ namespace rip::binary {
 				}));
 		}
 
-		inline void process_primitive_data(void*& obj, bool erased) {
-			if (obj == nullptr)
-				backend.write(offset_t<opaque_obj>{});
-			//else if (knownPtrs.contains(obj))
-			//	backend.write(offset_t<opaque_obj>{ knownPtrs[obj].offset });
-			else {
-				//for (auto& item : knownPtrs) {
-				//	if (obj >= item.first && obj < addptr(item.first, item.second.bufferSize)) {
-				//		backend.write(offset_t<opaque_obj>{ item.second.offset + (reinterpret_cast<size_t>(obj) - reinterpret_cast<size_t>(item.first)) });
-				//	}
-				//}
-				assert(false && "cannot find backreference");
-			}
-		}
-
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline void process_primitive(const T& obj) {
 			obj.visit([&](const auto& data) {
@@ -119,8 +120,11 @@ namespace rip::binary {
 					write_string(std::string{ data });
 					backend.write(size_val_t{ 0ull });
 				}
-				else
-					process_primitive_data(static_cast<typename decltype(data.refl)::repr>(data), data.refl.is_erased);
+				else {
+					typename decltype(data.refl)::repr val{};
+					val = static_cast<typename decltype(data.refl)::repr>(data);
+					process_primitive_data(val, data.refl.is_erased);
+				}
 			});
 		}
 
@@ -184,39 +188,39 @@ namespace rip::binary {
 				return;
 			}
 
-			if (obj.refl.is_weak()) {
+			if constexpr (obj.refl.is_weak()) {
 				knownPtr.weakPtrs.push_back(backend.tellp());
 				backend.write(offset_t<void>{});
-				return;
 			}
+			else {
+				auto targetRefl = obj.refl.get_target_type();
+				auto targetSize = targetRefl.template get_size<typename Backend::AddrType>(target);
+				auto targetAlignment = targetRefl.template get_alignment<typename Backend::AddrType>();
 
-			auto targetRefl = obj.refl.get_target_type();
-			auto targetSize = targetRefl.template get_size<typename Backend::AddrType>(target);
-			auto targetAlignment = targetRefl.template get_alignment<typename Backend::AddrType>();
-
-			if (targetSize == 0) {
-				backend.write(offset_t<void>{});
-				return;
-			}
-
-			auto targetOffset = enqueueBlock<void>(targetSize, targetAlignment, [this, target]() {
-				process_type(target);
-			});
-
-			resolvePtr(knownPtr, targetOffset);
-
-			target.visit([&](auto v) {
-				if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
-					size_t cur = targetOffset.value();
-
-					for (const auto& item : v) {
-						resolvePtr(lookupPtr(item), offset_t<void>{ cur });
-						cur += item.refl.template get_size<typename Backend::AddrType>(item);
-					}
+				if (targetSize == 0) {
+					backend.write(offset_t<void>{});
+					return;
 				}
-			});
 
-			backend.write(targetOffset);
+				auto targetOffset = enqueueBlock<void>(targetSize, targetAlignment, [this, target]() {
+					process_type(target);
+				});
+
+				resolvePtr(knownPtr, targetOffset);
+
+				target.visit([&](auto v) {
+					if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
+						size_t cur = targetOffset.value();
+
+						for (const auto& item : v) {
+							resolvePtr(lookupPtr(item), offset_t<void>{ cur });
+							cur += item.refl.template get_size<typename Backend::AddrType>(item);
+						}
+					}
+				});
+
+				backend.write(targetOffset);
+			}
 		}
 
 		template<typename T>
@@ -229,7 +233,7 @@ namespace rip::binary {
 			backend.write_padding(obj.refl.template get_alignment<typename Backend::AddrType>());
 
 			size_t typeStart = backend.tellp();
-			std::cout << std::hex << "type start at " << static_cast<size_t>(&obj) << " in, out at " << typeStart << std::endl;
+			//std::cout << std::hex << "type start at " << static_cast<size_t>(&obj) << " in, out at " << typeStart << std::endl;
 
 			obj.visit([&](auto v) {
 				if constexpr (decltype(v.refl)::kind == providers::TypeKind::PRIMITIVE) process_primitive(v);
@@ -255,7 +259,7 @@ namespace rip::binary {
 				process_fields(base.value());
 
 			obj.visit_fields([&](const auto& field, const auto& fieldRefl) {
-				std::cout << "field " << fieldRefl.get_name() << std::endl;
+				//std::cout << "field " << fieldRefl.get_name() << std::endl;
 				process_type(field);
 			});
 		}
@@ -270,8 +274,9 @@ namespace rip::binary {
 
 		template<typename T>
 		inline void process(const T& obj) {
+			nextOffset = backend.tellp();
 			enqueueBlock<void>(obj.refl.template get_size<typename Backend::AddrType>(obj), obj.refl.template get_alignment<typename Backend::AddrType>(), [this, obj]() { process_type(obj); });
-			worker.processQueuedBlocks();
+			processQueuedBlocks();
 		}
 	};
 
@@ -306,7 +311,7 @@ namespace rip::binary {
 
 	template<typename AllocatorSystem, typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
 	void* serializeBinaryToAllocatorSystemBuffer(const auto& acc) {
-		void* buf = new (AllocatorSystem::get_allocator()) uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)];
+		void* buf = new (AllocatorSystem::get_allocator()) uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)]{};
 
 		serializeBinaryToBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(buf, acc);
 
@@ -315,7 +320,7 @@ namespace rip::binary {
 
 	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
 	void* serializeBinaryToNativeBuffer(const auto& acc) {
-		void* buf = new uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)];
+		void* buf = new uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)]{};
 
 		serializeBinaryToBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(buf, acc);
 

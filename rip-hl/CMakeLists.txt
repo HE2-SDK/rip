@@ -1,6 +1,7 @@
 add_library(rip-hl INTERFACE)
 target_compile_features(rip-hl INTERFACE cxx_std_20)
-target_compile_options(rip-hl INTERFACE /clang:-ftemplate-backtrace-limit=0)
+target_compile_options(rip-hl INTERFACE /clang:-ftemplate-backtrace-limit=0 /clang:-fno-rtti)
+# target_compile_options(rip-hl INTERFACE /clang:-ftime-trace)
 target_compile_definitions(rip-hl INTERFACE _CRT_SECURE_NO_WARNINGS=1)
 target_link_libraries(rip-hl INTERFACE yyjson universal-cslib universal-cslib-reflection reflectcpp)
 add_subdirectory(src)

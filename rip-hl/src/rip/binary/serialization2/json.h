@@ -219,10 +219,6 @@ namespace rip::binary {
 			return yyjson_mut_strcpy(doc, obj);
 		}
 
-		inline yyjson_mut_val* process_primitive_data(void* const& obj) {
-			return yyjson_mut_str(doc, "TODO");
-		}
-
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline yyjson_mut_val* process_primitive(const T& obj) {
 			return obj.visit([&](const auto& data) {
@@ -320,27 +316,28 @@ namespace rip::binary {
 				return obj;
 			}
 
-			if (obj.refl.is_weak()) {
+			if constexpr (obj.refl.is_weak()) {
 				auto* obj = yyjson_mut_obj(doc);
 				knownPtr.weakPtrs.push_back(obj);
 				return obj;
 			}
+			else {
+				resolvePtr(knownPtr);
 
-			resolvePtr(knownPtr);
+				target.visit([&](auto v) {
+					if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
+						size_t idx{};
 
-			target.visit([&](auto v) {
-				if constexpr (decltype(v.refl)::kind == providers::TypeKind::CARRAY) {
-					size_t idx{};
-
-					for (const auto& item : v) {
-						currentJsonPtr.push_back(idx++);
-						resolvePtr(lookupPtr(item));
-						currentJsonPtr.pop_back();
+						for (const auto& item : v) {
+							currentJsonPtr.push_back(idx++);
+							resolvePtr(lookupPtr(item));
+							currentJsonPtr.pop_back();
+						}
 					}
-				}
-			});
+				});
 
-			return process_type(target);
+				return process_type(target);
+			}
 		}
 
 		template<typename T>

@@ -16,5 +16,12 @@ namespace rip::models {
 			if (data != nullptr)
 				AllocatorSystem::get_allocator()->Free(data);
 		}
+
+		inline Raw& operator=(const Raw<R, AllocatorSystem, AddrType, endianness, byteswap_offsets, relative_offsets>& other) = delete;
+		inline Raw& operator=(Raw<R, AllocatorSystem, AddrType, endianness, byteswap_offsets, relative_offsets>&& other) {
+			data = other.data;
+			other.data = nullptr;
+			return *this;
+		}
 	};
 }

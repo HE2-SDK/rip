@@ -1,6 +1,4 @@
 target_sources(rip-hl
-#    PRIVATE
-#        "rip/binary/containers/swif/SWIF.cpp"
     PUBLIC FILE_SET HEADERS FILES
         "rip/util/byteswap.h"
         "rip/util/memory.h"
@@ -12,7 +10,7 @@ target_sources(rip-hl
         "rip/binary/containers/binary-file/v2.h"
         "rip/binary/containers/mirage/v1.h"
         "rip/binary/containers/mirage/v2.h"
-        "rip/binary/containers/swif/SWIF.h"
+        "rip/binary/containers/swif/v1.h"
         "rip/binary/containers/needle-archive/v1.h"
         "rip/binary/containers/ntsi/v1.h"
         "rip/binary/containers/ntsp/v1.h"

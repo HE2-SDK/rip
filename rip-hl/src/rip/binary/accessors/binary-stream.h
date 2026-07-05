@@ -346,14 +346,14 @@ namespace rip::binary::accessors {
 
 			template<typename FieldRefl>
 			constexpr auto operator[](const FieldRefl& field_refl) const {
-				auto type = field_refl.get_type(*this);
+				auto type = field_refl.get_type();
 
 				return ValueAccessor<decltype(type)>{ this->reference, type };
 			}
 
 			template<simplerfl::strlit FieldName>
 			constexpr auto get_field() const {
-				return (*this)[this->refl.get_field<FieldName>(*this)];
+				return (*this)[this->refl.template get_field<FieldName>(*this)];
 			}
 
 			template<typename F>

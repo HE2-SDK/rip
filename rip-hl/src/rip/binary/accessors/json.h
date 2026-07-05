@@ -1551,7 +1551,7 @@ namespace rip::binary::accessors {
 
 			template<typename FieldRefl>
 			constexpr auto operator[](const FieldRefl& field_refl) const {
-				auto type = field_refl.get_type(*this);
+				auto type = field_refl.get_type();
 
 				return ValueAccessor<decltype(type)>{ this->reference, type };
 			}

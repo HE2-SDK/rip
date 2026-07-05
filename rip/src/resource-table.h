@@ -4,7 +4,7 @@
 #include <ucsl-reflection/providers/simplerfl.h>
 #include <ucsl-reflection/reflections/resources/fxcol/v1.h>
 #include <ucsl-reflection/reflections/resources/svcol/v1.h>
-//#include <ucsl-reflection/reflections/resources/map/v1.h>
+#include <ucsl-reflection/reflections/resources/map/v1.h>
 #include <ucsl-reflection/reflections/resources/material/v3.h>
 #include <ucsl-reflection/reflections/resources/object-world/v2.h>
 #include <ucsl-reflection/reflections/resources/object-world/v3.h>
@@ -12,12 +12,12 @@
 #include <ucsl-reflection/reflections/resources/rfl/v2.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
-//#include <ucsl-reflection/reflections/resources/swif/v5.h>
-//#include <ucsl-reflection/reflections/resources/swif/v6.h>
+#include <ucsl-reflection/reflections/resources/swif/v5.h>
+#include <ucsl-reflection/reflections/resources/swif/v6.h>
 #include <ucsl-reflection/reflections/resources/sobj/v1.h>
-//#include <ucsl-reflection/reflections/resources/nxs/v1.h>
-//#include <ucsl-reflection/reflections/resources/path/v1.h>
-//#include <ucsl-reflection/reflections/resources/path/v200.h>
+#include <ucsl-reflection/reflections/resources/nxs/v1.h>
+#include <ucsl-reflection/reflections/resources/path/v1.h>
+#include <ucsl-reflection/reflections/resources/path/v200.h>
 #include <ucsl-reflection/reflections/resources/pointcloud/v2.h>
 #include <ucsl-reflection/reflections/resources/master-level/v0.h>
 #include <ucsl-reflection/reflections/resources/density-setting/v11.h>
@@ -26,12 +26,38 @@
 #include <rip/models/binary-file/v2.h>
 #include <rip/models/mirage/v1.h>
 #include <rip/models/mirage/v2.h>
+#include <rip/models/swif/v1.h>
 #include <tuple>
 #include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
 #include "config.h"
+
+//namespace testres {
+//	namespace impl {
+//		struct TestRes2;
+//		struct TestRes {
+//			TestRes2* a;
+//		};
+//		struct TestRes2 {
+//			TestRes* b;
+//		};
+//	}
+//
+//	using TestRes = simplerfl::structure<impl::TestRes, "TestRes", void,
+//		simplerfl::field<ucsl::reflection::weak<simplerfl::deferred<impl::TestRes2>*>, "a">
+//	>;
+//
+//	using TestRes2 = simplerfl::structure<impl::TestRes2, "TestRes2", void,
+//		simplerfl::field<unsigned int, "bCount">,
+//		simplerfl::field<simplerfl::dynamic_carray<TestRes, simplerfl::field_resolver<unsigned int, "bCount">>*, "b">
+//	>;
+//}
+//
+//namespace simplerfl {
+//	template<> struct canonical<testres::impl::TestRes2> { using type = testres::TestRes2; };
+//}
 
 inline std::string get_rfl_class() { return Config::rflClass; }
 
@@ -73,9 +99,9 @@ namespace rip::cli::convert {
 			version<"3", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::object_world::v3::reflections::ObjectWorldData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint64_t, std::endian::little, true>
 		>;
 
-		//using map = resource<ResourceType::MAP, "1",
-		//	version<"1", ucsl::resources::map::v1::MapData<GI::AllocatorSystem>>
-		//>;
+		using map = resource<ResourceType::MAP, "1",
+			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::map::v1::reflections::MapData<GI::AllocatorSystem>>, GI::AllocatorSystem>, uint32_t, std::endian::big>
+		>;
 
 		using material = resource<ResourceType::MATERIAL, "3",
 			version<"3-container-v1", rip::models::MirageContainerV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::material::v3::reflections::ContextsData>, GI::AllocatorSystem>, uint32_t, std::endian::big>,
@@ -100,21 +126,21 @@ namespace rip::cli::convert {
 			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::svcol::v1::reflections::SvColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
-		//using swif = resource<ResourceType::SWIF, "6",
-		//	version<"5", ucsl::resources::swif::v5::SRS_PROJECT>,
-		//	version<"6", ucsl::resources::swif::v6::SRS_PROJECT>
-		//>;
+		using swif = resource<ResourceType::SWIF, "6",
+			version<"5", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v5::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"6", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v6::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 		using sobj = resource<ResourceType::SOBJ, "1",
 			version<"1-colors", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint32_t, std::endian::big, true>,
 			version<"1-scu", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint64_t, std::endian::little, true>
 		>;
-		//using nxs = resource<ResourceType::NXS, "1",
-		//	version<"1", ucsl::resources::nxs::v1::NXSData>
-		//>;
-		//using path = resource<ResourceType::PATH, "2.00",
-		//	version<"1", ucsl::resources::path::v1::PathsData>,
-		//	version<"2.00", ucsl::resources::path::v200::PathsData>
-		//>;
+		using nxs = resource<ResourceType::NXS, "1",
+			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::nxs::v1::reflections::NXSData>, GI::AllocatorSystem>, uint32_t, std::endian::big>
+		>;
+		using path = resource<ResourceType::PATH, "2.00",
+			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::path::v1::reflections::PathsData>, GI::AllocatorSystem>, uint32_t, std::endian::big>,
+			version<"2.00", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::path::v200::reflections::PathsData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 		using pcmodel = resource<ResourceType::PCMODEL, "2",
 			version<"2", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::pointcloud::v2::reflections::PointcloudData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
@@ -131,19 +157,19 @@ namespace rip::cli::convert {
 		using all = std::tuple<
 			//animation_state_machine,
 			//gedit,
-			////map,
+			//map,
 			//material,
 			//rfl,
 			//vat,
 			//fxcol,
 			//svcol,
-			////swif,
-			sobj
-			////nxs,
-			////path,
+			//swif,
+			//sobj,
+			//nxs,
+			//path,
 			//pcmodel,
 			//mlevel,
-			//density_setting,
+			density_setting
 			//aism
 		>;
 	}

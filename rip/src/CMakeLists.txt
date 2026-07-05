@@ -1,19 +1,19 @@
 set(RIP_RESOURCES
     #animation_state_machine
     #gedit
-    ## map
+    #map
     #material
     #rfl
     #vat
     #fxcol
     #svcol
-    ## swif
-    sobj
-    ## nxs
-    ## path
+    #swif
+    #sobj
+    #nxs
+    #path
     #pcmodel
     #mlevel
-    #density_setting
+    density_setting
     #aism
 )
 

@@ -5,4 +5,5 @@
 #include "binary/binary-file/v2.h"
 #include "binary/mirage/v1.h"
 #include "binary/mirage/v2.h"
+#include "binary/swif/v1.h"
 //#include "binary/needle-archive/v1.h"
