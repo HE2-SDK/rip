@@ -255,8 +255,11 @@ namespace rip::binary {
 		inline void process_fields(const T& obj) {
 			auto base = obj.get_base();
 
-			if (base.has_value())
+			if (base.has_value()) {
+				auto baseStart = backend.tellp();
 				process_fields(base.value());
+				backend.write_padding_bytes(base.value().refl.template get_size<typename Backend::AddrType>(obj) - (backend.tellp() - baseStart));
+			}
 
 			obj.visit_fields([&](const auto& field, const auto& fieldRefl) {
 				//std::cout << "field " << fieldRefl.get_name() << std::endl;
