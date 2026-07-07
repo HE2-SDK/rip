@@ -15,6 +15,7 @@ set(RIP_RESOURCES
     mlevel
     density_setting
     aism
+    cemt
 )
 
 foreach(RIP_RESOURCE IN LISTS RIP_RESOURCES)

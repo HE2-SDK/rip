@@ -28,6 +28,7 @@ enum class ResourceType {
 	MASTER_LEVEL,
 	DENSITY_SETTING,
 	AISM,
+	CEMT,
 };
 
 enum class AddressingMode {

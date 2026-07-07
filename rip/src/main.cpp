@@ -30,6 +30,7 @@ std::map<std::string, ResourceType> resourceTypeMap{
 	{ "masterlevel", ResourceType::MASTER_LEVEL },
 	{ "densitysetting", ResourceType::DENSITY_SETTING },
 	{ "aism", ResourceType::AISM },
+	{ "cemt", ResourceType::CEMT },
 };
 
 std::map<std::string, AddressingMode> addressingModeMap{

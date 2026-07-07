@@ -22,6 +22,8 @@
 #include <ucsl-reflection/reflections/resources/master-level/v0.h>
 #include <ucsl-reflection/reflections/resources/density-setting/v11.h>
 #include <ucsl-reflection/reflections/resources/aism/v0.h>
+#include <ucsl-reflection/reflections/resources/cemt/v100000.h>
+#include <ucsl-reflection/reflections/resources/cemt/v120000.h>
 #include <rip/models/binary-file/v1.h>
 #include <rip/models/binary-file/v2.h>
 #include <rip/models/mirage/v1.h>
@@ -153,6 +155,10 @@ namespace rip::cli::convert {
 		using aism = resource<ResourceType::AISM, "0",
 			version<"0", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::aism::v0::reflections::AIStateMachineData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
+		using cemt = resource<ResourceType::CEMT, "18",
+			version<"16", rip::models::Raw<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::cemt::v100000::reflections::EffectParam>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
+			version<"18", rip::models::Raw<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::cemt::v120000::reflections::EffectParam>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		using all = std::tuple<
 			animation_state_machine,
@@ -170,7 +176,8 @@ namespace rip::cli::convert {
 			pcmodel,
 			mlevel,
 			density_setting,
-			aism
+			aism,
+			cemt
 		>;
 	}
 }
