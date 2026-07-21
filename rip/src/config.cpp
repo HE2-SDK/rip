@@ -19,11 +19,19 @@ std::map<std::string, ResourceType> resourceTypeByExt{
 	{ ".densitysetting", ResourceType::DENSITY_SETTING },
 	{ ".aism", ResourceType::AISM },
 	{ ".cemt", ResourceType::CEMT },
+	{ ".effdb", ResourceType::EFFDB },
+	{ ".gismod", ResourceType::RFL },
+	{ ".gismop", ResourceType::RFL },
+	{ ".occ", ResourceType::RFL },
+};
+
+std::map<std::string, std::string> rflClassByExt{
+	{ ".gismod", "GismoConfigDesignData" },
+	{ ".gismop", "GismoConfigPlanData" },
+	{ ".occ", "OcclusionCapsuleList" },
 };
 
 auto extByResourceType = reverse_map(resourceTypeByExt);
-
-std::string Config::rflClass{};
 
 std::optional<ResourceType> getResourceTypeByExtension(const std::filesystem::path& file) {
 	std::filesystem::path filename{ file };
@@ -35,6 +43,21 @@ std::optional<ResourceType> getResourceTypeByExtension(const std::filesystem::pa
 
 		if (resourceTypeByExt.contains(ext))
 			return resourceTypeByExt[ext];
+	}
+
+	return std::nullopt;
+}
+
+std::optional<std::string> getRflClassByExtension(const std::filesystem::path& file) {
+	std::filesystem::path filename{ file };
+	std::string ext{};
+
+	while (filename.has_extension()) {
+		ext = filename.extension().generic_string() + ext;
+		filename = filename.stem();
+
+		if (rflClassByExt.contains(ext))
+			return rflClassByExt[ext];
 	}
 
 	return std::nullopt;
@@ -110,12 +133,29 @@ std::filesystem::path Config::getOutputFile() const {
 		replacedFile.replace_extension();
 
 	switch (getOutputFormat()) {
-	case Format::JSON: return std::move(replacedFile.replace_extension(extByResourceType[getResourceType()] + ".json"));
-	case Format::HSON: return std::move(replacedFile.replace_extension(extByResourceType[getResourceType()] + ".hson"));
-	case Format::BINARY: return std::move(replacedFile.replace_extension(extByResourceType[getResourceType()]));
+	case Format::JSON: replacedFile += ".json"; break;
+	case Format::HSON: replacedFile += ".hson"; break;
+	case Format::BINARY: break;
+	default:
+		throw std::runtime_error{ "The output file was not specified and it cannot be deduced from the other selected options." };
 	}
 
-	throw std::runtime_error{ "The output file was not specified and it cannot be deduced from the other selected options." };
+	return replacedFile;
+}
+
+std::string Config::getRflClass() const {
+	if (rflClass.has_value())
+		return rflClass.value();
+
+	std::string inputExt = inputFile.extension().generic_string();
+	if ((inputExt == ".json" || inputExt == ".hson"))
+		if (auto extRflClass = getRflClassByExtension(inputFile.stem()))
+			return extRflClass.value();
+
+	if (auto extRflClass = getRflClassByExtension(inputFile))
+		return extRflClass.value();
+
+	return "";
 }
 
 void Config::validate() const {

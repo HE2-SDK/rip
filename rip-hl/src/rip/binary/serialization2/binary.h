@@ -120,6 +120,8 @@ namespace rip::binary {
 					write_string(std::string{ data });
 					backend.write(size_val_t{ 0ull });
 				}
+				else if constexpr (std::is_array_v<typename decltype(data.refl)::repr> && std::is_same_v<std::remove_extent_t<typename decltype(data.refl)::repr>, char>)
+					backend.write_string(std::string{ data }.c_str());
 				else {
 					typename decltype(data.refl)::repr val{};
 					val = static_cast<typename decltype(data.refl)::repr>(data);

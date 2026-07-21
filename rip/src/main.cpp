@@ -31,6 +31,7 @@ std::map<std::string, ResourceType> resourceTypeMap{
 	{ "densitysetting", ResourceType::DENSITY_SETTING },
 	{ "aism", ResourceType::AISM },
 	{ "cemt", ResourceType::CEMT },
+	{ "effdb", ResourceType::EFFDB },
 };
 
 std::map<std::string, AddressingMode> addressingModeMap{
@@ -45,7 +46,7 @@ auto addressingModeMapReverse = reverse_map(addressingModeMap);
 int main(int argc, char** argv) {
 	CLI::App app{ "Restoration Issue Pocketknife" };
 	argv = app.ensure_utf8(argv);
-	
+
 	Config config{};
 
 	app.add_option("input", config.inputFile, "The input file.")
@@ -60,7 +61,7 @@ int main(int argc, char** argv) {
 	app.add_option("-o,--output-format", config.outputFormat, "The output format.")
 		->transform(CLI::CheckedTransformer(formatMap, CLI::ignore_case));
 	app.add_option("-t,--hedgeset-template", config.hedgesetTemplate, "The HedgeSet template file to use.");
-	app.add_option("-c,--rfl-class", Config::rflClass, "When converting RFL files: the name of the RflClass to use.");
+	app.add_option("-c,--rfl-class", config.rflClass, "When converting RFL files: the name of the RflClass to use.");
 	app.validate_positionals();
 
 	CLI11_PARSE(app, argc, argv);

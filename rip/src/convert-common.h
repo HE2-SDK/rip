@@ -104,6 +104,8 @@ namespace rip::cli::convert {
 
 	template<typename V>
 	void convertVersion(const Config& config) {
+		globalRflClass = config.getRflClass();
+
 		typename V::resourceDef model = loadVersion<V>(config);
 		saveVersion<V>(config, model);
 	}

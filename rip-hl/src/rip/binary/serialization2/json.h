@@ -222,7 +222,11 @@ namespace rip::binary {
 		template<ucsl::reflection::accessors::PrimitiveAccessor T>
 		inline yyjson_mut_val* process_primitive(const T& obj) {
 			return obj.visit([&](const auto& data) {
-				if constexpr (std::is_same_v<typename decltype(data.refl)::repr, const char*> || std::is_same_v<typename decltype(data.refl)::repr, ucsl::strings::VariableString>)
+				if constexpr (
+					std::is_same_v<typename decltype(data.refl)::repr, const char*>
+					|| std::is_same_v<typename decltype(data.refl)::repr, ucsl::strings::VariableString>
+					|| (std::is_array_v<typename decltype(data.refl)::repr> && std::is_same_v<std::remove_extent_t<typename decltype(data.refl)::repr>, char>)
+				)
 					return process_primitive_data(std::string{ data }.c_str());
 				else
 					return process_primitive_data(static_cast<typename decltype(data.refl)::repr>(data));

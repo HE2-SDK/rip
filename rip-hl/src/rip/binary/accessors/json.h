@@ -1239,7 +1239,7 @@ namespace rip::binary::accessors {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			inline operator const char* () const {
+			inline operator std::string () const {
 				return yyjson_get_str(this->reference);
 			}
 		};
@@ -1248,8 +1248,19 @@ namespace rip::binary::accessors {
 		public:
 			using Accessor<Refl>::Accessor;
 
-			inline operator const char* () const {
+			inline operator std::string () const {
 				return yyjson_get_str(this->reference);
+			}
+		};
+		template<typename Refl, size_t size>
+		class PrimitiveDataAccessor<Refl, char[size]> : public Accessor<Refl> {
+		public:
+			using Accessor<Refl>::Accessor;
+
+			inline operator std::string () const {
+				std::string res{ yyjson_get_str(this->reference) };
+				res.resize(std::extent_v<typename Refl::repr> - 1);
+				return res;
 			}
 		};
 

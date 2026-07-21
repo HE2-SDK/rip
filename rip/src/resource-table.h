@@ -24,6 +24,7 @@
 #include <ucsl-reflection/reflections/resources/aism/v0.h>
 #include <ucsl-reflection/reflections/resources/cemt/v100000.h>
 #include <ucsl-reflection/reflections/resources/cemt/v120000.h>
+#include <ucsl-reflection/reflections/resources/effdb/v100.h>
 #include <rip/models/binary-file/v1.h>
 #include <rip/models/binary-file/v2.h>
 #include <rip/models/mirage/v1.h>
@@ -61,7 +62,9 @@
 //	template<> struct canonical<testres::impl::TestRes2> { using type = testres::TestRes2; };
 //}
 
-inline std::string get_rfl_class() { return Config::rflClass; }
+static std::string globalRflClass{};
+
+inline std::string get_rfl_class() { return globalRflClass; }
 
 namespace rip::cli::convert {
 	template <size_t N>
@@ -124,7 +127,7 @@ namespace rip::cli::convert {
 			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::fxcol::v1::reflections::FxColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
-		using svcol = resource < ResourceType::SVCOL, "1",
+		using svcol = resource<ResourceType::SVCOL, "1",
 			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::svcol::v1::reflections::SvColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
@@ -159,6 +162,9 @@ namespace rip::cli::convert {
 			version<"16", rip::models::Raw<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::cemt::v100000::reflections::EffectParam>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
 			version<"18", rip::models::Raw<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::cemt::v120000::reflections::EffectParam>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
+		using effdb = resource<ResourceType::EFFDB, "100",
+			version<"100", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::effdb::v100::reflections::EffdbData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
 
 		using all = std::tuple<
 			animation_state_machine,
@@ -177,7 +183,8 @@ namespace rip::cli::convert {
 			mlevel,
 			density_setting,
 			aism,
-			cemt
+			cemt,
+			effdb
 		>;
 	}
 }

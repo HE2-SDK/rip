@@ -58,7 +58,7 @@ namespace rip::binary::accessors {
 		public:
 			using AccessorBase<Refl>::AccessorBase;
 
-			inline operator std::conditional_t<std::is_same_v<typename Refl::repr, const char*> || std::is_same_v<typename Refl::repr, ucsl::strings::VariableString>,std::string,typename Refl::repr>() const {
+			inline operator std::conditional_t<std::is_same_v<typename Refl::repr, const char*> || std::is_same_v<typename Refl::repr, ucsl::strings::VariableString> || (std::is_array_v<typename Refl::repr> && std::is_same_v<std::remove_extent_t<typename Refl::repr>, char>),std::string,typename Refl::repr>() const {
 				if constexpr (std::is_same_v<typename Refl::repr, const char*> || std::is_same_v<typename Refl::repr, ucsl::strings::VariableString>) {
 					return this->reference.withStream([&](auto& stream) {
 						rip::binary::offset_t<const char> offset{};
@@ -73,6 +73,14 @@ namespace rip::binary::accessors {
 							stream.seekg(pos);
 						}
 
+						return res;
+					});
+				}
+				else if constexpr (std::is_array_v<typename Refl::repr> && std::is_same_v<std::remove_extent_t<typename Refl::repr>, char>) {
+					return this->reference.withStream([&](auto& stream) {
+						std::string res{};
+						stream.read_string(res);
+						res.resize(std::extent_v<typename Refl::repr> - 1);
 						return res;
 					});
 				}

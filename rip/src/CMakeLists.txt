@@ -16,6 +16,7 @@ set(RIP_RESOURCES
     density_setting
     aism
     cemt
+    effdb
 )
 
 foreach(RIP_RESOURCE IN LISTS RIP_RESOURCES)
