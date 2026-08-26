@@ -12,6 +12,10 @@
 #include <ucsl-reflection/reflections/resources/rfl/v2.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-rangers.h>
 #include <ucsl-reflection/reflections/resources/vertex-animation-texture/v1-miller.h>
+#include <ucsl-reflection/reflections/resources/swif/v1.h>
+#include <ucsl-reflection/reflections/resources/swif/v2.h>
+#include <ucsl-reflection/reflections/resources/swif/v3.h>
+#include <ucsl-reflection/reflections/resources/swif/v4.h>
 #include <ucsl-reflection/reflections/resources/swif/v5.h>
 #include <ucsl-reflection/reflections/resources/swif/v6.h>
 #include <ucsl-reflection/reflections/resources/sobj/v1.h>
@@ -69,15 +73,23 @@ inline std::string get_rfl_class() { return globalRflClass; }
 namespace rip::cli::convert {
 	template <size_t N>
 	struct strlit {
+		static constexpr size_t length = N;
+
 		std::array<char, N> buffer{};
 
 		constexpr strlit(const auto... characters) : buffer{ characters..., '\0' } {}
 		constexpr strlit(const std::array<char, N> buffer) : buffer{ buffer } {}
 		constexpr strlit(const char(&str)[N]) { std::copy_n(str, N, std::data(buffer)); }
 
-		operator const char* () const { return std::data(buffer); }
-		operator std::string() const { return std::string(std::data(buffer), N - 1); }
+		constexpr operator const char* () const { return std::data(buffer); }
+		constexpr operator std::string() const { return std::string(std::data(buffer), N - 1); }
 		constexpr operator std::string_view() const { return std::string_view(std::data(buffer), N - 1); }
+
+		template<size_t M> constexpr bool operator==(const strlit<M>& other) const { return false; }
+		template<> constexpr bool operator==(const strlit<N>& other) const { return buffer == other.buffer; }
+
+		template<size_t M> constexpr bool operator!=(const strlit<M>& other) const { return true; }
+		template<> constexpr bool operator!=(const strlit<N>& other) const { return buffer != other.buffer; }
 	};
 
 	namespace resources {
@@ -93,6 +105,17 @@ namespace rip::cli::convert {
 			static constexpr std::endian endianness = endianness_;
 			static constexpr bool isHSONCompatible = isHSONCompatible_;
 		};
+
+		template<strlit field_name, typename IsFirst, typename... Fields> struct find_named_type;
+		template<strlit field_name, typename HeadField, typename... RestFields> struct find_named_type<field_name, std::enable_if_t<field_name == HeadField::name>, HeadField, RestFields...> { using type = HeadField; };
+		template<strlit field_name, typename HeadField, typename... RestFields> struct find_named_type<field_name, std::enable_if_t<field_name != HeadField::name>, HeadField, RestFields...> { using type = typename find_named_type<field_name, void, RestFields...>::type; };
+
+		template<strlit field_name, typename... Fields> using find_named_type_t = typename find_named_type<field_name, void, Fields...>::type;
+
+		template<strlit version_name, typename Resource> struct find_version;
+		template<strlit version_name, ResourceType type_, strlit defaultVersion, typename... Versions> struct find_version<version_name, resource<type_, defaultVersion, Versions...>> { using type = find_named_type_t<version_name, Versions...>; };
+
+		template<strlit version_name, typename Resource> using find_version_t = typename find_version<version_name, Resource>::type;
 
 		using animation_state_machine = resource<ResourceType::ASM, "1.03-miller",
 			version<"1.03-rangers", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::animation_state_machine::v103_rangers::reflections::AsmData>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
@@ -131,13 +154,18 @@ namespace rip::cli::convert {
 			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::svcol::v1::reflections::SvColData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
-		using swif = resource<ResourceType::SWIF, "6",
+		using swif = resource<ResourceType::SWIF, "4",
+			version<"1", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v1::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint32_t, std::endian::little>,
+			version<"2", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v2::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint32_t, std::endian::little>,
+			version<"3", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v3::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint32_t, std::endian::little>,
+			version<"3-be", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v3::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint32_t, std::endian::big>,
+			version<"4", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v4::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
 			version<"5", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v5::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint64_t, std::endian::little>,
 			version<"6", rip::models::SWIFV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::swif::v6::reflections::SRS_PROJECT>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 		using sobj = resource<ResourceType::SOBJ, "1",
 			version<"1-colors", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint32_t, std::endian::big, true>,
-			version<"1-scu", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint64_t, std::endian::little, true>
+			version<"1-scu", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::sobj::v1::reflections::SetObjectData<GI::AllocatorSystem>>, GI::AllocatorSystem, true>, uint32_t, std::endian::little, true>
 		>;
 		using nxs = resource<ResourceType::NXS, "1",
 			version<"1", rip::models::BinaryFileV1<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::nxs::v1::reflections::NXSData>, GI::AllocatorSystem>, uint32_t, std::endian::big>

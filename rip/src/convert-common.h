@@ -109,13 +109,4 @@ namespace rip::cli::convert {
 		typename V::resourceDef model = loadVersion<V>(config);
 		saveVersion<V>(config, model);
 	}
-
-	template<ResourceType type, strlit defaultVersion, typename... Versions>
-	void convertVersions(const Config& config, resources::resource<type, defaultVersion, Versions...>) {
-		std::string defVer = defaultVersion;
-		std::string version = config.version.value_or(defVer);
-
-		if (!((version == Versions::name.operator std::string() && (convertVersion<Versions>(config), true)) || ...))
-			throw std::runtime_error{ std::string{ "Version " } + version + " is invalid for selected resource type." };
-	}
 }
