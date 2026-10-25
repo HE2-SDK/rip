@@ -30,6 +30,7 @@ enum class ResourceType {
 	AISM,
 	CEMT,
 	EFFDB,
+	PBA,
 };
 
 enum class AddressingMode {

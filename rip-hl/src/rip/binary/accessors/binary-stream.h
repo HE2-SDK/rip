@@ -270,7 +270,7 @@ namespace rip::binary::accessors {
 			}
 
 			constexpr bool operator!=(std::nullptr_t ptr) const {
-				return !this->reference.offset != 0;
+				return this->reference.offset != 0;
 			}
 
 			constexpr bool operator!=(const AddressAccessor<Refl>& other) const {

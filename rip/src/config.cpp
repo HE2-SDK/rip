@@ -23,6 +23,7 @@ std::map<std::string, ResourceType> resourceTypeByExt{
 	{ ".gismod", ResourceType::RFL },
 	{ ".gismop", ResourceType::RFL },
 	{ ".occ", ResourceType::RFL },
+	{ ".pba", ResourceType::PBA },
 };
 
 std::map<std::string, std::string> rflClassByExt{

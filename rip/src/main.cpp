@@ -32,6 +32,7 @@ std::map<std::string, ResourceType> resourceTypeMap{
 	{ "aism", ResourceType::AISM },
 	{ "cemt", ResourceType::CEMT },
 	{ "effdb", ResourceType::EFFDB },
+	{ "pba", ResourceType::PBA },
 };
 
 std::map<std::string, AddressingMode> addressingModeMap{

@@ -35,6 +35,7 @@ add_resource_version("aism" "0")
 add_resource_version("cemt" "16")
 add_resource_version("cemt" "18")
 add_resource_version("effdb" "100")
+add_resource_version("pba" "1")
 
 target_sources(rip
     PRIVATE

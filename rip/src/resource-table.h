@@ -29,6 +29,7 @@
 #include <ucsl-reflection/reflections/resources/cemt/v100000.h>
 #include <ucsl-reflection/reflections/resources/cemt/v120000.h>
 #include <ucsl-reflection/reflections/resources/effdb/v100.h>
+#include <ucsl-reflection/reflections/resources/pba/v1.h>
 #include <rip/models/binary-file/v1.h>
 #include <rip/models/binary-file/v2.h>
 #include <rip/models/mirage/v1.h>
@@ -194,6 +195,10 @@ namespace rip::cli::convert {
 			version<"100", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::effdb::v100::reflections::EffdbData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
 		>;
 
+		using pba = resource<ResourceType::PBA, "1",
+			version<"1", rip::models::BinaryFileV2<ucsl::reflection::providers::simplerfl<GI>::RootType<ucsl::resources::pba::v1::reflections::PbaData>, GI::AllocatorSystem>, uint64_t, std::endian::little>
+		>;
+
 		using all = std::tuple<
 			animation_state_machine,
 			gedit,
@@ -212,7 +217,8 @@ namespace rip::cli::convert {
 			density_setting,
 			aism,
 			cemt,
-			effdb
+			effdb,
+			pba
 		>;
 	}
 }
