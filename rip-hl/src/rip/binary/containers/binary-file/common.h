@@ -6,8 +6,8 @@
 #include <rip/util/byteswap.h>
 
 namespace rip::binary::containers::binary_file {
-	template<typename RawStreamType, typename AddressType>
-	class data_istream : public binary_istream<RawStreamType, AddressType> {
+	template<typename BinaryInputStreamType>
+	class data_istream : public binary_istream<typename BinaryInputStreamType::RawStreamType, typename BinaryInputStreamType::AddrType> {
 	protected:
 		std::map<size_t, std::string> strings{};
 
@@ -26,15 +26,15 @@ namespace rip::binary::containers::binary_file {
 	public:
 		static constexpr bool hasNativeStrings = true;
 
-		data_istream(RawStreamType& raw_stream, std::endian endianness) : binary_istream<RawStreamType, AddressType>{ raw_stream, endianness, raw_stream.tellg() } {}
+		data_istream(BinaryInputStreamType& parent_stream, std::endian endianness) : binary_istream<typename BinaryInputStreamType::RawStreamType, typename BinaryInputStreamType::AddrType>{ parent_stream.get_raw_stream(), endianness, parent_stream.get_raw_stream().tellg() } {}
 
 		template<typename T> void read(T& obj) {
-			binary_istream<RawStreamType, AddressType>::read(obj);
+			binary_istream<typename BinaryInputStreamType::RawStreamType, typename BinaryInputStreamType::AddrType>::read(obj);
 		}
 
 		template<> void read(const char*& obj) {
-			AddressType stroff;
-			binary_istream<RawStreamType, AddressType>::read(stroff);
+			typename BinaryInputStreamType::AddrType stroff;
+			binary_istream<typename BinaryInputStreamType::RawStreamType, typename BinaryInputStreamType::AddrType>::read(stroff);
 
 			if (stroff == 0)
 				obj = nullptr;
@@ -51,8 +51,8 @@ namespace rip::binary::containers::binary_file {
 		}
 	};
 
-	template<typename RawStreamType, typename AddressType, std::endian endianness>
-	class data_ostream : public binary_ostream<RawStreamType, AddressType, endianness> {
+	template<typename BinaryOutputStreamType>
+	class data_ostream : public binary_ostream<typename BinaryOutputStreamType::RawStreamType, typename BinaryOutputStreamType::AddrType, BinaryOutputStreamType::endianness> {
 	protected:
 		std::vector<std::string> strings{}; // This seems superfluous but it is here to keep the discovery order, to generate a file that is closer to official files.
 		std::map<std::string, std::vector<size_t>> stringOffsets{};
@@ -65,7 +65,7 @@ namespace rip::binary::containers::binary_file {
 
 				for (auto offset : offsets) {
 					this->seekp(offset);
-					write(static_cast<AddressType>(pos));
+					write(static_cast<typename BinaryOutputStreamType::AddrType>(pos));
 				}
 
 				this->seekp(pos);
@@ -99,17 +99,17 @@ namespace rip::binary::containers::binary_file {
 	public:
 		static constexpr bool hasNativeStrings = true;
 
-		data_ostream(RawStreamType& raw_stream) : binary_ostream<RawStreamType, AddressType, endianness>{ raw_stream, raw_stream.tellp() } {}
+		data_ostream(BinaryOutputStreamType& parent_stream) : binary_ostream<typename BinaryOutputStreamType::RawStreamType, typename BinaryOutputStreamType::AddrType, BinaryOutputStreamType::endianness>{ parent_stream.get_raw_stream(), parent_stream.get_raw_stream().tellp() } {}
 
 		template<typename T> void write(const T& obj) {
-			binary_ostream<RawStreamType, AddressType, endianness>::write(obj);
+			binary_ostream<typename BinaryOutputStreamType::RawStreamType, typename BinaryOutputStreamType::AddrType, BinaryOutputStreamType::endianness>::write(obj);
 		}
 
 		template<typename T> void write(const offset_t<T>& obj) {
 			if (obj.has_value())
 				offsets.emplace_back(this->tellp());
 
-			binary_ostream<RawStreamType, AddressType, endianness>::write(obj);
+			binary_ostream<typename BinaryOutputStreamType::RawStreamType, typename BinaryOutputStreamType::AddrType, BinaryOutputStreamType::endianness>::write(obj);
 		}
 
 		template<> void write(const char* const& obj) {
@@ -126,7 +126,7 @@ namespace rip::binary::containers::binary_file {
 				offsets.emplace_back(this->tellp());
 			}
 
-			binary_ostream<RawStreamType, AddressType, endianness>::write(static_cast<AddressType>(0));
+			binary_ostream<typename BinaryOutputStreamType::RawStreamType, typename BinaryOutputStreamType::AddrType, BinaryOutputStreamType::endianness>::write(static_cast<typename BinaryOutputStreamType::AddrType>(0));
 		}
 	};
 }

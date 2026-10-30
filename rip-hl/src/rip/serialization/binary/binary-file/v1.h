@@ -7,9 +7,7 @@ namespace rip::serialization {
 	template<typename Refl, typename AllocatorSystem, bool include_bvh>
 	struct binary<models::BinaryFileV1<Refl, AllocatorSystem, include_bvh>> {
 		inline static void save(auto& stream, const models::BinaryFileV1<Refl, AllocatorSystem, include_bvh>& model) {
-			// We probably want to revert to BFW taking a binary_ostream but avoiding that refactor atm by unpacking the raw stream here.
-			// Maybe endianness should also just not be type level.
-			rip::binary::containers::binary_file::v1::BinaryFileWriter<typename std::decay_t<decltype(stream)>::RawStreamType, typename std::decay_t<decltype(stream)>::AddrType, std::decay_t<decltype(stream)>::endianness, include_bvh> writer{stream.get_raw_stream()};
+			rip::binary::containers::binary_file::v1::BinaryFileWriter<std::decay_t<decltype(stream)>, include_bvh> writer{ stream };
 
 			auto chunk = writer.getDataChunk();
 
@@ -17,9 +15,7 @@ namespace rip::serialization {
 		}
 
 		inline static models::BinaryFileV1<Refl, AllocatorSystem, include_bvh> load(auto& stream) {
-			// We probably want to revert to BFW taking a binary_ostream but avoiding that refactor atm by unpacking the raw stream here.
-			// Maybe endianness should also just not be type level.
-			rip::binary::containers::binary_file::v1::BinaryFileReader<typename std::decay_t<decltype(stream)>::RawStreamType, typename std::decay_t<decltype(stream)>::AddrType> reader{ stream.get_raw_stream() };
+			rip::binary::containers::binary_file::v1::BinaryFileReader reader{ stream };
 
 			auto chunk = reader.getData();
 

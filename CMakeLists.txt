@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(rip VERSION 1.0.37
+project(rip VERSION 1.0.38
                  DESCRIPTION "Restoration Issue Pocketknife"
                  LANGUAGES CXX)
 

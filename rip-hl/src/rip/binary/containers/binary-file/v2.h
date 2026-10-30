@@ -40,12 +40,12 @@ namespace rip::binary::containers::binary_file::v2 {
 		}
 	};
 
-	template<typename RawStreamType, typename AddressType>
-	class chunk_istream : public data_istream<RawStreamType, AddressType> {
+	template<typename BinaryInputStreamType>
+	class chunk_istream : public data_istream<BinaryInputStreamType> {
 		ChunkHeader header;
 
 	public:
-		chunk_istream(RawStreamType& raw_stream, binary_istream<RawStreamType, AddressType>& stream, std::endian endianness) : data_istream<RawStreamType, AddressType>{ raw_stream, endianness } {
+		chunk_istream(BinaryInputStreamType& stream, std::endian endianness) : data_istream<BinaryInputStreamType>{ stream, endianness } {
 			stream.read(header);
 			stream.skip_padding_bytes(header.additionalHeaderSize);
 			this->offset_base = stream.tellg();
@@ -56,15 +56,15 @@ namespace rip::binary::containers::binary_file::v2 {
 		}
 	};
 
-	template<typename RawStreamType, typename AddressType, std::endian endianness>
-	class chunk_ostream : public data_ostream<RawStreamType, AddressType, endianness> {
-		binary_ostream<RawStreamType, AddressType, endianness>& stream;
+	template<typename BinaryOutputStreamType>
+	class chunk_ostream : public data_ostream<BinaryOutputStreamType> {
+		BinaryOutputStreamType& stream;
 		const ucsl::magic_t<4> magic{};
 		size_t chunkOffset{};
 		unsigned short additionalHeaderSize{};
 
 	public:
-		chunk_ostream(const ucsl::magic_t<4>& magic, RawStreamType& raw_stream, binary_ostream<RawStreamType, AddressType, endianness>& stream, unsigned short additionalHeaderSize = 0x18) : stream{ stream }, magic { magic }, additionalHeaderSize{ additionalHeaderSize }, chunkOffset{ raw_stream.tellp() }, data_ostream<RawStreamType, AddressType, endianness>{ raw_stream } {
+		chunk_ostream(const ucsl::magic_t<4>& magic, BinaryOutputStreamType& stream, unsigned short additionalHeaderSize = 0x18) : stream{ stream }, magic { magic }, additionalHeaderSize{ additionalHeaderSize }, chunkOffset{ stream.get_raw_stream().tellp() }, data_ostream<BinaryOutputStreamType>{ stream } {
 			stream.write(ChunkHeader{});
 			stream.write_padding_bytes(additionalHeaderSize);
 			this->offset_base = stream.tellp();
@@ -95,35 +95,33 @@ namespace rip::binary::containers::binary_file::v2 {
 		}
 	};
 
-	template<typename RawStreamType, typename AddrType>
+	template<typename BinaryInputStreamType>
 	class BinaryFileReader {
-		RawStreamType& raw_stream;
-		binary_istream<RawStreamType, AddrType> stream;
+		BinaryInputStreamType stream;
 		FileHeader header;
 
 	public:
 		std::endian endianness;
 
-		BinaryFileReader(RawStreamType& raw_stream) : raw_stream{ raw_stream }, stream { raw_stream } {
+		BinaryFileReader(BinaryInputStreamType& parent_stream) : stream { parent_stream.get_raw_stream() } {
 			stream.read(header);
 			stream.seekg(0);
 			stream.endianness = header.endianness == 'B' ? std::endian::big : std::endian::little;
 			stream.read(header);
 		}
 
-		chunk_istream<RawStreamType, AddrType> getNextDataChunk() {
-			return { raw_stream, stream, header.endianness == 'B' ? std::endian::big : std::endian::little };
+		chunk_istream<BinaryInputStreamType> getNextDataChunk() {
+			return { stream, header.endianness == 'B' ? std::endian::big : std::endian::little };
 		}
 	};
 
-	template<typename RawStreamType, typename AddrType, std::endian endianness = std::endian::native>
+	template<typename BinaryOutputStreamType>
 	class BinaryFileWriter {
-		RawStreamType& raw_stream;
-		binary_ostream<RawStreamType, AddrType, endianness> stream;
+		BinaryOutputStreamType stream;
 		unsigned short chunkCount{};
 
 	public:
-		BinaryFileWriter(RawStreamType& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+		BinaryFileWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream() } {
 			stream.write(FileHeader{});
 		}
 
@@ -131,9 +129,9 @@ namespace rip::binary::containers::binary_file::v2 {
 			finish();
 		}
 
-		chunk_ostream<RawStreamType, AddrType, endianness> addDataChunk() {
+		chunk_ostream<BinaryOutputStreamType> addDataChunk() {
 			chunkCount++;
-			return { "DATA", raw_stream, stream };
+			return { "DATA", stream };
 		}
 
 		void finish() {
@@ -142,7 +140,7 @@ namespace rip::binary::containers::binary_file::v2 {
 			FileHeader fileHeader{};
 			fileHeader.magic = "BINA";
 			fileHeader.version = "210";
-			fileHeader.endianness = endianness == std::endian::big ? 'B' : 'L';
+			fileHeader.endianness = BinaryOutputStreamType::endianness == std::endian::big ? 'B' : 'L';
 			fileHeader.fileSize = static_cast<unsigned int>(pos);
 			fileHeader.chunkCount = chunkCount;
 
