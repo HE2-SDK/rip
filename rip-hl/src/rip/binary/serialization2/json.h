@@ -6,6 +6,7 @@
 #include <yyjson.h>
 #include <iomanip>
 #include <sstream>
+#include <variant>
 #include <rip/util/object-id-guids.h>
 
 namespace rip::binary {

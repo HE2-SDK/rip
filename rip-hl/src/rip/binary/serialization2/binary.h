@@ -1,10 +1,13 @@
 #pragma once
 #include <type_traits>
+#include <bit>
 #include <ucsl-reflection/reflections/basic-types.h>
 #include <ucsl-reflection/traversals/types.h>
 #include <ucsl-reflection/accessors/types.h>
 #include <ucsl-reflection/opaque.h>
+#include <rip/binary/stream.h>
 #include <rip/binary/types.h>
+#include <rip/util/memory.h>
 //#include "BlobWorker.h"
 #include <iostream>
 #include <queue>
@@ -314,13 +317,18 @@ namespace rip::binary {
 		return nos.tellp();
 	}
 
-	template<typename AllocatorSystem, typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
-	void* serializeBinaryToAllocatorSystemBuffer(const auto& acc) {
-		void* buf = new (AllocatorSystem::get_allocator()) uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)]{};
+	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void* serializeBinaryToAllocatorBuffer(ucsl::memory::IAllocator* allocator, const auto& acc) {
+		void* buf = new (allocator) uint8_t[measureBinary<AddrType, endianness, byteswap_offsets, relative_offsets>(acc)]{};
 
 		serializeBinaryToBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(buf, acc);
 
 		return buf;
+	}
+
+	template<typename AllocatorSystem, typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
+	void* serializeBinaryToAllocatorSystemBuffer(const auto& acc) {
+		return serializeBinaryToAllocatorBuffer<AddrType, endianness, byteswap_offsets, relative_offsets>(AllocatorSystem::get_allocator(), acc);
 	}
 
 	template<typename AddrType, std::endian endianness = std::endian::native, bool byteswap_offsets = true, bool relative_offsets = false>
