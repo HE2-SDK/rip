@@ -1,4 +1,5 @@
 #pragma once
+#include <bit>
 #include <ucsl/bitset.h>
 #include <ucsl/magic.h>
 #include <rip/binary/stream.h>
@@ -26,22 +27,21 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::ntsi::v1 {
-    template<typename AddressType, std::endian endianness = std::endian::native>
+    template<typename BinaryInputStreamType>
     class NeedleTextureStreamingInfoReader {
     private:
-        fast_istream raw_stream;
-        binary_istream<AddressType> stream;
+        BinaryInputStreamType stream;
 
     public:
         FileHeader header;
         std::string packageName{};
 
-        NeedleTextureStreamingInfoReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream, endianness } {
+        NeedleTextureStreamingInfoReader(BinaryInputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.endianness } {
             stream.read(header);
             stream.read_string(packageName);
         }
 
-        binary_istream<AddressType>& getStream() {
+        BinaryInputStreamType& getStream() {
             return stream;
         }
     };
