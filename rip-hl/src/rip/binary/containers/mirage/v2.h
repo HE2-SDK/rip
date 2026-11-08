@@ -12,7 +12,7 @@ namespace rip::binary::containers::mirage::v2 {
         };
 
         unsigned int nodeSizeAndFlags;
-        unsigned int version;
+        unsigned int value;
 		ucsl::magic_t<8> magic;
     };
 
@@ -37,7 +37,7 @@ namespace rip::binary::containers::mirage::v2 {
 namespace rip::util {
     template<> inline void byteswap_deep(rip::binary::containers::mirage::v2::NodeHeader& value) noexcept {
         byteswap_deep(value.nodeSizeAndFlags);
-        byteswap_deep(value.version);
+        byteswap_deep(value.value);
     }
 
     template<> inline void byteswap_deep(rip::binary::containers::mirage::v2::FileHeader& value) noexcept {
@@ -49,73 +49,90 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::mirage::v2 {
-	template<typename AddressType>
+	template<typename BinaryInputStreamType>
     class MirageResourceImageReader {
-        class node_istream : public binary_istream<AddressType> {
-            size_t nodeOffset{};
+    private:
+        BinaryInputStreamType stream;
+        FileHeader header;
+        std::endian endianness{ std::endian::big };
+        size_t offsetBase;
+
+    public:
+        class NodeReader {
+            MirageResourceImageReader& imgReader;
 
         public:
             NodeHeader header;
 
-            node_istream(fast_istream& raw_stream, std::endian endianness) : binary_istream<AddressType>{ raw_stream, endianness, 0x10 }, nodeOffset{ this->tellg() } {
-                this->read(header);
+            NodeReader(MirageResourceImageReader& imgReader) : imgReader{ imgReader } {
+                imgReader.stream.read(header);
             }
 
-            bool isLastChild() const {
+            unsigned int get_size() const {
+                return header.nodeSizeAndFlags & 0x1FFFFFFF;
+            }
+
+            bool is_leaf() const {
+                return header.nodeSizeAndFlags & NodeHeader::LEAF;
+            }
+
+            bool is_last_child() const {
                 return header.nodeSizeAndFlags & NodeHeader::LAST_CHILD;
             }
 
+            BinaryInputStreamType& get_stream() {
+                return imgReader.stream;
+            }
+
             template<typename F>
-            void forEachChild(F f) {
-                assert((header.nodeSizeAndFlags & NodeHeader::LEAF) == 0 && "not a branch node");
+            void for_each_child(F f) {
+                assert(!is_leaf() && "not a branch node");
 
                 bool isLast{};
                 do {
-                    node_istream child{ this->stream, this->endianness };
+                    auto nodeOffset = imgReader.stream.tellg();
+
+                    NodeReader child{ imgReader };
 
                     f(child);
 
-                    this->seekg(nodeOffset + (header.nodeSizeAndFlags & 0x1FFFFFFF));
-                    this->skip_padding(16);
-                    isLast = child.isLastChild();
+                    imgReader.stream.seekg(nodeOffset + child.get_size());
+                    imgReader.stream.skip_padding(16);
+                    isLast = child.is_last_child();
                 } while (!isLast);
             }
         };
 
-    private:
-        fast_istream raw_stream;
-        binary_istream<AddressType> stream;
-        FileHeader header;
-        std::endian endianness{ std::endian::big };
-
-    public:
-        MirageResourceImageReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+        MirageResourceImageReader(BinaryInputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.endianness, parent_stream.get_raw_stream().tellg() + sizeof(FileHeader) } {
             stream.read(header);
         }
 
-        node_istream get_root_node() {
-            return { raw_stream, endianness };
+        BinaryInputStreamType& get_stream() {
+            return stream;
+        }
+
+        NodeReader get_root_node() {
+            return { *this };
         }
     };
 
-    template<typename AddressType, std::endian endianness = std::endian::big>
+    template<typename BinaryOutputStreamType>
     class MirageResourceImageWriter {
     private:
-        fast_ostream raw_stream;
-        binary_ostream<AddressType, endianness> stream;
+        BinaryOutputStreamType stream;
         std::vector<unsigned int> addressLocations{};
 
     public:
-        class node_ostream : public binary_ostream<AddressType, endianness> {
+        class node_ostream : public BinaryOutputStreamType {
         protected:
             MirageResourceImageWriter& writer;
             const ucsl::magic_t<8> magic{};
-            unsigned int version{};
+            unsigned int value{};
             size_t nodeOffset{};
             unsigned int flags{};
 
         public:
-            node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, version{ version }, writer{ writer }, binary_ostream<AddressType, endianness>{ writer.raw_stream, 0x10 }, nodeOffset{ this->tellp() }, flags{ flags | (is_last ? NodeHeader::LAST_CHILD : 0) } {
+            node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags, bool is_last = false) : magic{ magic }, value{ value }, writer{ writer }, BinaryOutputStreamType{ writer.stream.get_raw_stream(), sizeof(FileHeader) }, nodeOffset{this->tellp()}, flags{flags | (is_last ? NodeHeader::LAST_CHILD : 0)} {
                 this->write(NodeHeader{});
             }
 
@@ -127,7 +144,7 @@ namespace rip::binary::containers::mirage::v2 {
 
             template<typename T>
             void write(const T& obj) {
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             template<typename T>
@@ -135,7 +152,7 @@ namespace rip::binary::containers::mirage::v2 {
                 if (obj.has_value())
                     writer.addressLocations.push_back(static_cast<unsigned int>(this->tellp()));
 
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             void finish() {
@@ -144,7 +161,7 @@ namespace rip::binary::containers::mirage::v2 {
 
                 NodeHeader nodeHeader{};
                 nodeHeader.nodeSizeAndFlags = static_cast<unsigned int>(nodeEnd - nodeOffset) | flags;
-                nodeHeader.version = version;
+                nodeHeader.value = value;
                 nodeHeader.magic = magic;
 
                 this->seekp(nodeOffset);
@@ -157,32 +174,24 @@ namespace rip::binary::containers::mirage::v2 {
 
         class leaf_node_ostream : public node_ostream {
         public:
-            leaf_node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, version, writer, NodeHeader::LEAF | flags } {}
+            leaf_node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, value, writer, NodeHeader::LEAF | flags } {}
         };
 
         class branch_node_ostream : public node_ostream {
         public:
-            branch_node_ostream(const ucsl::magic_t<8>& magic, unsigned int version, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, version, writer, flags } {}
+            branch_node_ostream(const ucsl::magic_t<8>& magic, unsigned int value, MirageResourceImageWriter& writer, unsigned int flags) : node_ostream{ magic, value, writer, flags } {}
 
-            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, 0 };
+            branch_node_ostream add_branch_node(const ucsl::magic_t<8>& magic, unsigned int value, bool is_last) {
+                return { magic, value, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
 
-            branch_node_ostream add_last_branch_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, NodeHeader::LAST_CHILD };
-            }
-
-            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, 0 };
-            }
-
-            leaf_node_ostream add_last_leaf_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-                return { magic, version, this->writer, NodeHeader::LAST_CHILD };
+            leaf_node_ostream add_leaf_node(const ucsl::magic_t<8>& magic, unsigned int value, bool is_last) {
+                return { magic, value, this->writer, is_last ? NodeHeader::LAST_CHILD : 0 };
             }
         };
 
     public:
-        MirageResourceImageWriter(std::ostream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+        MirageResourceImageWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream(), parent_stream.get_raw_stream().tellp() } { // I added the offset here. If conversion errors, this is probably the cause.
             stream.write(FileHeader{});
         }
 
@@ -190,8 +199,8 @@ namespace rip::binary::containers::mirage::v2 {
             finish();
         }
 
-        branch_node_ostream add_root_node(const ucsl::magic_t<8>& magic, unsigned int version) {
-            return { magic, version, *this, NodeHeader::LAST_CHILD };
+        branch_node_ostream add_root_node(const ucsl::magic_t<8>& magic, unsigned int value) {
+            return { magic, value, *this, NodeHeader::LAST_CHILD };
         }
 
         void finish() {

@@ -85,6 +85,7 @@ namespace rip::schemas::hedgeset {
 		struct Template {
 			unsigned int version{};
 			std::string format{};
+			std::optional<bool> collapseParents{};
 			std::map<std::string, EnumDef> enums{};
 			std::map<std::string, StructDef> structs{};
 			std::map<std::string, ObjectDef> objects{};
@@ -136,7 +137,7 @@ namespace rip::schemas::hedgeset {
 			if (type == "color8") return templ.format == "gedit_v2" ? MemberType::COLOR_BYTE_RGBA : MemberType::COLOR_BYTE_ABGR;
 			if (type == "colorf") return templ.format == "gedit_v2" ? MemberType::COLOR_FLOAT_RGBA : MemberType::COLOR_FLOAT_ABGR;
 			if (type == "string") return MemberType::STRING;
-			if (type == "object_reference") return templ.format == "gedit_v2" ? MemberType::OBJECT_ID_V1 : MemberType::OBJECT_ID_V2;
+			if (type == "object_reference") return templ.format == "gedit_v2" || templ.format == "sobj_v1" ? MemberType::OBJECT_ID_V1 : MemberType::OBJECT_ID_V2;
 			return MemberType::VOID;
 		}
 
@@ -159,8 +160,8 @@ namespace rip::schemas::hedgeset {
 				return { .type = MemberType::ENUM, .subtype = get_primitive_type(e.type), .enumm = load_enum(member.type, enums) };
 			}
 
-			if (member.type == "flags")
-				return { .type = MemberType::FLAGS, .subtype = get_primitive_type(member.subtype.value()), .flag_values = get_flag_values(member) };
+			if (member.flags.has_value())
+				return { .type = MemberType::FLAGS, .subtype = get_primitive_type(member.type), .flag_values = get_flag_values(member) };
 
 			if (member.type != "array")
 				return { .type = get_primitive_type(member.type, member.alignment) };
@@ -209,28 +210,9 @@ namespace rip::schemas::hedgeset {
 			return enums[name];
 		}
 
-		std::shared_ptr<StandaloneRflSystem::RflClass> load_rfl_class(const std::string& name) {
-			if (schema.classes.contains(name))
-				return schema.classes[name];
-
-			const json_reflections::StructDef& structDef = templ.structs.at(name);
-
-			auto [resIt, resSuccess] = schema.classes.emplace(name, std::make_shared<StandaloneRflSystem::RflClass>(name, std::nullopt, 0, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassEnum>>{}, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>{}, 0));
-			auto [resName, res] = *resIt;
-
-			std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>> structEnums{};
-			std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>> structMembers{};
-
-			unsigned int offset{};
-
-			std::optional<std::shared_ptr<StandaloneRflSystem::RflClass>> parent{};
-
-			if (structDef.parent.has_value()) {
-				parent = load_rfl_class(structDef.parent.value());
-				offset = parent.value()->GetSize();
-			}
-
-			res->parent = parent;
+		void add_fields(std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>>& structEnums, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>& structMembers, unsigned int& offset, const json_reflections::StructDef& structDef) {
+			if (templ.collapseParents.value_or(false) && structDef.parent.has_value())
+				add_fields(structEnums, structMembers, offset, templ.structs.at(structDef.parent.value()));
 
 			if (structDef.fields.has_value()) {
 				for (auto& memberDef : structDef.fields.value()) {
@@ -251,6 +233,32 @@ namespace rip::schemas::hedgeset {
 					offset += (unsigned int)member->GetSize();
 				}
 			}
+		}
+
+		std::shared_ptr<StandaloneRflSystem::RflClass> load_rfl_class(const std::string& name) {
+			if (schema.classes.contains(name))
+				return schema.classes[name];
+
+			const json_reflections::StructDef& structDef = templ.structs.at(name);
+
+			auto [resIt, resSuccess] = schema.classes.emplace(name, std::make_shared<StandaloneRflSystem::RflClass>(name, std::nullopt, 0, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassEnum>>{}, std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>>{}, 0));
+			auto [resName, res] = *resIt;
+
+			std::map<std::string, std::shared_ptr<StandaloneRflSystem::RflClassEnum>> structEnums{};
+			std::vector<std::shared_ptr<StandaloneRflSystem::RflClassMember>> structMembers{};
+
+			unsigned int offset{};
+
+			std::optional<std::shared_ptr<StandaloneRflSystem::RflClass>> parent{};
+
+			if (!templ.collapseParents.value_or(false) && structDef.parent.has_value()) {
+				parent = load_rfl_class(structDef.parent.value());
+				offset = parent.value()->GetSize();
+			}
+
+			res->parent = parent;
+
+			add_fields(structEnums, structMembers, offset, structDef);
 
 			auto vals = std::views::values(structEnums);
 			std::ranges::copy(vals.begin(), vals.end(), std::back_inserter(res->enums));
@@ -361,7 +369,7 @@ namespace rip::schemas::hedgeset {
 
 		template<typename Range>
 		json_reflections::RangeProps generate_range(const typename GameInterface::RflSystem::RflClassMember& member) {
-			auto* range = member.GetRange<Range>();
+			auto* range = member.template GetRange<Range>();
 
 			return range == nullptr ? json_reflections::RangeProps{} : json_reflections::RangeProps{ get_range_value<Range>(range->min), get_range_value<Range>(range->max), get_range_value<Range>(range->step) };
 		}

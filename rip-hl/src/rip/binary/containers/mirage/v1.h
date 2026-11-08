@@ -37,45 +37,44 @@ namespace rip::util {
 }
 
 namespace rip::binary::containers::mirage::v1 {
-    template<typename AddressType>
+    template<typename BinaryInputStreamType>
     class MirageResourceImageReader {
     private:
-        fast_istream raw_stream;
-        binary_istream<AddressType> stream;
-        FileHeader header;
+        BinaryInputStreamType stream;
 
     public:
-        class data_istream : public binary_istream<AddressType> {
+        FileHeader header;
+
+        class data_istream : public BinaryInputStreamType {
         public:
-            data_istream(fast_istream& raw_stream, std::endian endianness, size_t offset) : binary_istream<AddressType>{ raw_stream, endianness, offset } { }
+            data_istream(MirageResourceImageReader& reader, size_t offset) : BinaryInputStreamType{ reader.stream.get_raw_stream(), reader.stream.endianness, offset } {}
         };
 
-        MirageResourceImageReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream, std::endian::big } {
+        MirageResourceImageReader(BinaryInputStreamType& parent) : stream{ parent.get_raw_stream(), parent.endianness } {
             stream.read(header);
             stream.skip_padding_bytes(header.headerSize - sizeof(FileHeader));
         }
 
         data_istream get_data() {
-            return { raw_stream, std::endian::big, stream.tellg() };
+            return { *this, stream.tellg() };
         }
     };
 
-    template<typename AddressType, std::endian endianness = std::endian::big>
+    template<typename BinaryOutputStreamType>
     class MirageResourceImageWriter {
     private:
-        fast_ostream raw_stream;
-        binary_ostream<AddressType, endianness> stream;
+        BinaryOutputStreamType stream;
         std::vector<unsigned int> addressLocations{};
 
     public:
-        class data_ostream : public binary_ostream<AddressType, endianness> {
+        class data_ostream : public BinaryOutputStreamType {
         protected:
             MirageResourceImageWriter& writer;
 
         public:
             static constexpr bool hasNativeStrings = false;
 
-            data_ostream(MirageResourceImageWriter& writer, size_t offset) : writer{ writer }, binary_ostream<AddressType, endianness>{ writer.raw_stream, offset } { }
+            data_ostream(MirageResourceImageWriter& writer, size_t offset) : writer{ writer }, BinaryOutputStreamType{ writer.stream.get_raw_stream(), offset } {}
 
             ~data_ostream() {
                 finish();
@@ -83,7 +82,7 @@ namespace rip::binary::containers::mirage::v1 {
 
             template<typename T>
             void write(const T& obj) {
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             template<typename T>
@@ -91,7 +90,7 @@ namespace rip::binary::containers::mirage::v1 {
                 if (obj.has_value())
                     writer.addressLocations.push_back(static_cast<unsigned int>(this->tellp()));
 
-                binary_ostream<AddressType, endianness>::write(obj);
+                BinaryOutputStreamType::write(obj);
             }
 
             void finish() {
@@ -99,7 +98,7 @@ namespace rip::binary::containers::mirage::v1 {
             }
         };
 
-        MirageResourceImageWriter(std::ostream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+        MirageResourceImageWriter(BinaryOutputStreamType& parent) : stream{ parent.get_raw_stream() } {
             stream.write(FileHeader{});
             stream.write_padding_bytes(0x18 - sizeof(FileHeader));
         }
@@ -130,6 +129,8 @@ namespace rip::binary::containers::mirage::v1 {
         }
 
         void writeAddressResolutionChunk() {
+            stream.write(static_cast<unsigned int>(addressLocations.size()));
+
             for (unsigned int addressLocation : addressLocations)
                 stream.write(addressLocation);
         }

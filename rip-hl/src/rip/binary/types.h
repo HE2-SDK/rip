@@ -11,4 +11,7 @@ namespace rip::binary {
 	public:
 		using std::optional<size_t>::optional;
 	};
+
+	enum class size_val_t : size_t {};
+	enum class ptrdiff_val_t : ptrdiff_t {};
 }

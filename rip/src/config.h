@@ -28,6 +28,9 @@ enum class ResourceType {
 	MASTER_LEVEL,
 	DENSITY_SETTING,
 	AISM,
+	CEMT,
+	EFFDB,
+	PBA,
 };
 
 enum class AddressingMode {
@@ -42,14 +45,14 @@ struct Config {
 	std::optional<std::string> version{};
 	std::optional<Format> inputFormat{};
 	std::optional<Format> outputFormat{};
-	std::filesystem::path schema{};
 	std::filesystem::path hedgesetTemplate{};
 	AddressingMode addressingMode{ AddressingMode::_64 };
-	static std::string rflClass;
+	std::optional<std::string> rflClass{};
 
 	ResourceType getResourceType() const;
 	Format getInputFormat() const;
 	Format getOutputFormat() const;
 	std::filesystem::path getOutputFile() const;
+	std::string getRflClass() const;
 	void validate() const;
 };

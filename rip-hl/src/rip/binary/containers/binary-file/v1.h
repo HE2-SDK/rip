@@ -2,11 +2,8 @@
 #include <bit>
 #include <map>
 #include <ucsl/magic.h>
-#include <ucsl-reflection/providers/simplerfl.h>
 #include <rip/binary/stream.h>
 #include <rip/util/byteswap.h>
-#include <rip/binary/serialization/ReflectionDeserializer.h>
-#include <rip/binary/serialization/ReflectionSerializer.h>
 #include <iostream>
 #include <vector>
 #include "common.h"
@@ -32,141 +29,94 @@ namespace rip::binary::containers::binary_file::v1 {
 		}
 	};
 
-	//class chunk_ostream : public offset_binary_ostream {
-	//	binary_ostream& stream;
-	//	const ucsl::magic_t<4> magic{};
-	//	size_t chunkOffset{};
-	//	unsigned short additionalHeaderSize{};
-	//	std::vector<std::string> strings{}; // This seems superfluous but it is here to keep the discovery order, to generate a file that is closer to official files.
-	//	std::map<std::string, std::vector<size_t>> stringOffsets{};
-	//	std::vector<size_t> offsets{};
+	struct BVHHeader {
+		unsigned int unk1;
+		unsigned int unk2;
+		ucsl::magic_t<3> magic;
 
-	//	void writeStringTable();
-	//	void writeOffsetTable();
+		inline void byteswap_deep() noexcept {
+			util::byteswap_deep(unk1);
+			util::byteswap_deep(unk2);
+		}
+	};
 
-	//public:
-	//	static constexpr bool hasNativeStrings = true;
+	template<typename BinaryOutputStreamType, bool include_bvh = false>
+	class chunk_ostream : public data_ostream<BinaryOutputStreamType> {
+		BinaryOutputStreamType& stream;
 
-	//	chunk_ostream(binary_ostream& stream);
-	//	~chunk_ostream();
+	public:
+		chunk_ostream(BinaryOutputStreamType& stream) : stream{ stream }, data_ostream<BinaryOutputStreamType>{ stream } {
+			stream.write(FileHeader{});
+			this->offset_base = stream.tellp();
+		}
 
-	//	template<typename T> void write(const T& obj) {
-	//		stream.write(obj);
-	//	}
+		~chunk_ostream() {
+			finish();
+		}
 
-	//	template<> void write(const char* const& obj) {
-	//		if (obj != nullptr) {
-	//			auto i = stringOffsets.find(obj);
+		void finish() {
+			this->writeStringTable();
+			size_t offsetTableStart = this->stream.tellp();
+			this->writeOffsetTable();
+			size_t offsetTableEnd = this->stream.tellp();
 
-	//			if (i == stringOffsets.end()) {
-	//				strings.emplace_back(obj);
-	//				stringOffsets[obj] = { tellp() };
-	//			}
-	//			else
-	//				i->second.emplace_back(tellp());
+			unsigned int footerCount{};
+			if constexpr (include_bvh) {
+				BVHHeader bvhHeader{};
+				bvhHeader.unk1 = 0x10;
+				bvhHeader.unk2 = 0x0;
+				bvhHeader.magic = "bvh";
 
-	//			offsets.emplace_back(tellp());
-	//		}
+				this->stream.write(bvhHeader);
+				this->stream.write_padding(4);
 
-	//		stream.write(0ull);
-	//	}
+				footerCount++;
+			}
 
-	//	template<typename T> void write(const serialized_types::o64_t<T>& obj) {
-	//		offsets.emplace_back(tellp());
-	//		stream.write(obj.has_value() ? obj.value() : 0ull);
-	//	}
+			size_t chunkEnd = this->stream.tellp();
 
-	//	template<typename T> void write(const serialized_types::o32_t<T>& obj) {
-	//		offsets.emplace_back(tellp());
-	//		stream.write(obj.has_value() ? obj.value() : 0u);
-	//	}
+			FileHeader fileHeader{};
+			fileHeader.size = static_cast<unsigned int>(chunkEnd);
+			fileHeader.dataSize = static_cast<unsigned int>(offsetTableStart - sizeof(FileHeader));
+			fileHeader.offsetTableSize = static_cast<unsigned int>(offsetTableEnd - offsetTableStart);
+			fileHeader.footerCount = footerCount;
+			fileHeader.version = "\000\0001";
+			fileHeader.endianness = BinaryOutputStreamType::endianness == std::endian::big ? 'B' : 'L';
+			fileHeader.magic = "BINA";
 
-	//	void finish();
-	//};
+			this->stream.seekp(0);
+			this->stream.write(fileHeader);
+			this->stream.seekp(chunkEnd);
+		}
+	};
 
-	template<typename AddrType>
+	template<typename BinaryInputStreamType>
 	class BinaryFileReader {
-		fast_istream raw_stream;
-		binary_istream<AddrType> stream;
+		BinaryInputStreamType stream;
 		FileHeader header;
 
 	public:
-		BinaryFileReader(std::istream& stream_) : raw_stream{ stream_ }, stream{ raw_stream } {
+		inline BinaryFileReader(BinaryInputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream() } {
 			stream.read(header);
 			stream.seekg(0);
 			stream.endianness = header.endianness == 'B' ? std::endian::big : std::endian::little;
 			stream.read(header);
 		}
 
-		data_istream<AddrType> getData() {
-			return { raw_stream, stream, header.endianness == 'B' ? std::endian::big : std::endian::little, 0 };
+		inline data_istream<BinaryInputStreamType> getData() {
+			return { stream, header.endianness == 'B' ? std::endian::big : std::endian::little };
 		}
 	};
 
-	//class BinaryFileWriter {
-	//	binary_ostream& stream;
-	//	std::endian endianness;
-	//	unsigned short chunkCount{};
-
-	//public:
-	//	BinaryFileWriter(binary_ostream& stream, std::endian endianness = std::endian::native);
-	//	~BinaryFileWriter();
-	//	chunk_ostream addData();
-	//	void finish();
-	//};
-
-	//class BinaryFileResolver {
-	//	FileHeader* file;
-
-	//	void doByteswaps();
-	//	void resolveAddresses();
-
-	//public:
-	//	BinaryFileResolver(void* file);
-	//	void* getData();
-	//};
-
-	template<typename AddrType>
-	class BinaryFileDeserializer {
-		BinaryFileReader<AddrType> container;
+	template<typename BinaryOutputStreamType, bool include_bvh = false>
+	class BinaryFileWriter {
+		BinaryOutputStreamType stream;
 
 	public:
-		BinaryFileDeserializer(std::istream& stream) : container{ stream } {}
+		BinaryFileWriter(BinaryOutputStreamType& parent_stream) : stream{ parent_stream.get_raw_stream() } {}
 
-		template<typename GameInterface, typename T, typename R>
-		T* deserialize(R refl) {
-			auto chunk = container.getData();
-
-			rip::binary::ReflectionDeserializer<GameInterface, decltype(chunk)> deserializer{ chunk };
-
-			return deserializer.deserialize<T, R>(refl);
-		}
-
-		template<typename GameInterface, typename T>
-		T* deserialize() {
-			return deserialize<GameInterface, T>(ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
+		chunk_ostream<BinaryOutputStreamType, include_bvh> getDataChunk() {
+			return { stream };
 		}
 	};
-
-	//template<typename AddrType, std::endian endianness = std::endian::native>
-	//class BinaryFileSerializer {
-	//	BinaryFileWriter<AddrType, endianness> container;
-
-	//public:
-	//	BinaryFileSerializer(std::ostream& stream) : container{ stream } {}
-
-	//	template<typename T, typename R>
-	//	void serialize(T& data, R refl) {
-	//		auto chunk = container.addDataChunk();
-
-	//		rip::binary::ReflectionSerializer serializer{ chunk };
-
-	//		serializer.serialize(data, refl);
-	//	}
-
-	//	template<typename GameInterface, typename T>
-	//	void serialize(T& data) {
-	//		serialize(data, ucsl::reflection::providers::simplerfl<GameInterface>::template reflect<T>());
-	//	}
-	//};
 }
